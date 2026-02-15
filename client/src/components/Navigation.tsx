@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigationGuard } from '../context/NavigationGuardContext';
 import { LogOut, Menu, X, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
+import PulseLogo from './PulseLogo';
 
 export default function Navigation() {
   const { user, logout } = useAuth();
@@ -48,9 +49,9 @@ export default function Navigation() {
             {/* Logo / app name */}
             <button
               onClick={() => guardedNavigate('/dashboard')}
-              className="flex items-center gap-2 font-bold text-lg"
+              className="flex items-center"
             >
-              Unity Pulse
+              <PulseLogo size="sm" />
             </button>
 
             {/* Desktop nav */}

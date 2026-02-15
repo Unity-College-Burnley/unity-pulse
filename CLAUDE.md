@@ -8,7 +8,7 @@ Unity Pulse is a school management platform for Unity College. It provides role-
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18, TypeScript 5.3, Vite 5, Tailwind CSS 3.4, React Router 6.21, Lucide icons |
+| Frontend | React 18, TypeScript 5.3, Vite 5, Tailwind CSS 3.4, React Router 6.21, Lucide icons, Google Fonts (Inter + Quantico) |
 | Backend | Express 4.18, TypeScript 5.3, JWT (jsonwebtoken), bcryptjs |
 | Dev tooling | tsx (watch mode), concurrently (runs client + server), Vite proxy to backend |
 | Hosting | GitHub Pages (static build with bundled mock data) |
@@ -38,6 +38,7 @@ Unity Pulse/
 │   │   │   ├── MyPlansTab.tsx      # SEND plans — pen portraits, MyPlans, EHCPs
 │   │   │   ├── NewsFeed.tsx
 │   │   │   ├── PhotoGrid.tsx       # Student photo grid (register tab)
+│   │   │   ├── PulseLogo.tsx       # Wordmark logo — heartbeat SVG + "Unity Pulse" in Quantico font
 │   │   │   ├── SeatingPlan.tsx     # Drag-and-drop seating plan (register tab)
 │   │   │   ├── SpreadsheetTab.tsx  # Editable data grid with arrow key nav
 │   │   │   ├── Timetable.tsx
@@ -67,7 +68,9 @@ Unity Pulse/
 │   │   ├── vite-env.d.ts           # Vite type declarations (import.meta.env)
 │   │   └── index.css               # Tailwind directives + global styles
 │   ├── public/
-│   │   └── 404.html                # GitHub Pages SPA redirect hack
+│   │   ├── 404.html                # GitHub Pages SPA redirect hack
+│   │   ├── favicon.svg             # Browser tab icon — shield with pulse line
+│   │   └── logo.svg                # Standalone shield logo (used as fallback)
 │   ├── tailwind.config.js          # Brand purple (#6D2077), custom slide animations
 │   └── vite.config.ts              # Dev proxy + GitHub Pages base path
 │
@@ -337,6 +340,15 @@ Pastoral notes are recorded on the StudentProfile page (Pastoral tab), not from 
 - **Severity levels**: low (green), medium (amber), high (red)
 - **Create/delete**: Teachers can add notes and delete their own; admins can delete any
 - **Count badge**: Pastoral tab shows a count badge when notes exist
+
+## Branding & Logo
+
+- **PulseLogo component** (`client/src/components/PulseLogo.tsx`) — the primary wordmark used on the login page and navigation bar
+- **Design**: A single continuous SVG line starts with ECG heartbeat peaks (spike up + dip below the baseline) to the LEFT of the text, then flattens into a traditional underline beneath "Unity Pulse"
+- **Font**: Quantico (Google Fonts) — a structured sans-serif with a slightly techy feel, used only for the logo wordmark. The rest of the app uses Inter.
+- **Two sizes**: `size="lg"` for the login page, `size="sm"` for the nav bar. Uses `preserveAspectRatio="none"` with `vectorEffect="non-scaling-stroke"` so the flat underline stretches to fit while the stroke stays consistent.
+- **Favicon**: `client/public/favicon.svg` — purple shield with pulse line for the browser tab
+- **Colour**: Brand purple `#6D2077` (`brand-500` in Tailwind config). The logo inherits `currentColor` so it adapts to white text on the nav bar and login page.
 
 ## Patterns & Conventions
 

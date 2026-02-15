@@ -4,6 +4,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
+import PulseLogo from '../components/PulseLogo';
 
 export default function Login() {
   const { login } = useAuth();
@@ -27,16 +28,18 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 px-4">
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-500">Unity Pulse</h1>
-          <p className="mt-2 text-gray-500 text-sm">Unity College parent &amp; staff portal</p>
+          <div className="flex justify-center mb-3">
+            <PulseLogo size="lg" className="text-white" />
+          </div>
+          <p className="mt-1 text-brand-200 text-sm">Unity College school portal</p>
         </div>
 
         {/* Login card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-lg p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Sign in</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,8 +96,8 @@ export default function Login() {
         </div>
 
         {/* Demo hint */}
-        <div className="mt-4 rounded-lg bg-brand-50 border border-brand-100 p-3 text-xs text-brand-700">
-          <p className="font-medium mb-1">Demo credentials</p>
+        <div className="mt-4 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 p-3 text-xs text-white/80">
+          <p className="font-medium mb-1 text-white">Demo credentials</p>
           <p>Parent: sarah.thompson@example.com</p>
           <p>Staff: j.wilson@unitycollege.ac.uk</p>
           <p>Admin: admin@unitycollege.ac.uk</p>

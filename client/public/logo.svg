@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Rounded shield -->
+  <path d="M32 3C17 3, 5 13, 5 27L5 38C5 52, 17 61, 32 61C47 61, 59 52, 59 38L59 27C59 13, 47 3, 32 3Z" fill="#6D2077"/>
+  <!-- Pulse/heartbeat line -->
+  <polyline points="8,33 19,33 23,33 26,43 30,19 34,39 37,27 40,33 45,33 56,33" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
