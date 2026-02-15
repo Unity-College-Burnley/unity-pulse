@@ -16,6 +16,8 @@ import type {
   ClassGroup,
   StaffLesson,
   RegisterEntry,
+  Homework,
+  HomeworkCompletion,
 } from '../types';
 
 // ----- Users -----
@@ -192,6 +194,24 @@ export const users: User[] = [
     firstName: 'Rachel',
     lastName: 'Green',
     studentIds: ['stu-16'],
+  },
+  {
+    id: 'usr-student-1',
+    email: 'oliver.thompson@unitycollege.ac.uk',
+    passwordHash: '$2a$10$placeholder',
+    role: 'student',
+    firstName: 'Oliver',
+    lastName: 'Thompson',
+    studentIds: ['stu-1'],
+  },
+  {
+    id: 'usr-student-2',
+    email: 'leo.patel@unitycollege.ac.uk',
+    passwordHash: '$2a$10$placeholder',
+    role: 'student',
+    firstName: 'Leo',
+    lastName: 'Patel',
+    studentIds: ['stu-9'],
   },
   {
     id: 'usr-admin-1',
@@ -970,4 +990,55 @@ export const messages: Message[] = [
     body: 'That\'s really helpful, thank you. I\'ll make sure he looks at the practice sheets this weekend.',
     sentAt: '2026-02-14T07:20:00Z',
   },
+];
+
+// ----- Homework -----
+
+export const homeworks: Homework[] = [
+  {
+    id: 'hw-1',
+    classGroupId: 'cls-1',
+    title: 'Quadratic Equations Practice',
+    description: 'Complete questions 1–15 on page 94 of the textbook. Show all working out clearly.',
+    dueDate: '2026-02-20',
+    issuedDate: '2026-02-13',
+    teacherId: 'usr-teacher-1',
+    teacherName: 'Mr Wilson',
+    links: ['https://www.mathsisfun.com/algebra/quadratic-equation.html'],
+  },
+  {
+    id: 'hw-2',
+    classGroupId: 'cls-1',
+    title: 'Simultaneous Equations Worksheet',
+    description: 'Download and complete the worksheet linked below. Use the elimination method for questions 1–5 and substitution for 6–10.',
+    dueDate: '2026-02-17',
+    issuedDate: '2026-02-10',
+    teacherId: 'usr-teacher-1',
+    teacherName: 'Mr Wilson',
+  },
+  {
+    id: 'hw-3',
+    classGroupId: 'cls-2',
+    title: 'Trigonometry — SOH CAH TOA',
+    description: 'Complete the trigonometry revision sheet. Label all diagrams and show working for each step.',
+    dueDate: '2026-02-19',
+    issuedDate: '2026-02-12',
+    teacherId: 'usr-teacher-1',
+    teacherName: 'Mr Wilson',
+    links: ['https://corbettmaths.com/contents/trigonometry/'],
+  },
+];
+
+// ----- Homework Completions -----
+
+export const homeworkCompletions: HomeworkCompletion[] = [
+  // hw-2 (Simultaneous Equations) — several students handed in
+  { homeworkId: 'hw-2', studentId: 'stu-1', completedAt: '2026-02-15T09:00:00Z', markedBy: 'usr-teacher-1' },
+  { homeworkId: 'hw-2', studentId: 'stu-2', completedAt: '2026-02-15T09:05:00Z', markedBy: 'usr-teacher-1' },
+  { homeworkId: 'hw-2', studentId: 'stu-4', completedAt: '2026-02-14T14:00:00Z', markedBy: 'usr-teacher-1' },
+  { homeworkId: 'hw-2', studentId: 'stu-5', completedAt: '2026-02-15T08:50:00Z', markedBy: 'usr-teacher-1' },
+  { homeworkId: 'hw-2', studentId: 'stu-6', completedAt: '2026-02-15T10:00:00Z', markedBy: 'usr-teacher-1' },
+  // hw-3 (Trigonometry) — a couple of Year 10 students handed in
+  { homeworkId: 'hw-3', studentId: 'stu-9', completedAt: '2026-02-14T16:00:00Z', markedBy: 'usr-teacher-1' },
+  { homeworkId: 'hw-3', studentId: 'stu-10', completedAt: '2026-02-15T08:45:00Z', markedBy: 'usr-teacher-1' },
 ];

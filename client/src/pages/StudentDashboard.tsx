@@ -1,5 +1,5 @@
 // ============================================================
-// Parent dashboard — pulls together all child-data widgets
+// Student dashboard — student's own view of their data
 // ============================================================
 
 import { useEffect, useState } from 'react';
@@ -28,7 +28,7 @@ interface DashboardData {
   homework: HomeworkItem[];
 }
 
-export default function ParentDashboard() {
+export default function StudentDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState('');
@@ -37,11 +37,10 @@ export default function ParentDashboard() {
   useEffect(() => {
     if (!user || user.studentIds.length === 0) return;
 
-    const studentId = user.studentIds[0]; // first child for now
+    const studentId = user.studentIds[0];
 
     async function fetchAll() {
       try {
-        // Fetch all data in parallel
         const [studentRes, attendanceRes, behaviourRes, timetableRes, announcementsRes, homeworkRes] =
           await Promise.all([
             api.get<{ data: Student }>(`/students/${studentId}`),
@@ -93,18 +92,23 @@ export default function ParentDashboard() {
       {/* Student header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">
-          {data.student.firstName} {data.student.lastName}
+          Welcome, {data.student.firstName}
         </h1>
-        <p className="text-sm text-gray-500">
-          Year {data.student.yearGroup} · {data.student.formGroup}
-        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-700">
+            Year {data.student.yearGroup}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            {data.student.formGroup}
+          </span>
+        </div>
       </div>
 
-      {/* Dashboard grid — stacks on mobile, 2-column on larger screens */}
+      {/* Dashboard grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <HomeworkList homework={data.homework} />
-        <AttendanceSummary data={data.attendance} />
         <Timetable lessons={data.timetable} />
+        <AttendanceSummary data={data.attendance} />
         <BehaviourLog events={data.behaviour} />
         <div className="lg:col-span-2">
           <NewsFeed announcements={data.announcements} />

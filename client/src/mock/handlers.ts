@@ -15,6 +15,8 @@ import {
   announcements,
   messages,
   registerStore,
+  homeworks,
+  homeworkCompletions,
 } from './data';
 
 // MockUser type available from ./data if needed
@@ -97,10 +99,10 @@ function err(status: number, error: string): { status: number; data: any } {
   return { status, data: { error } };
 }
 
-/** Check whether the current (parent) user owns the given student */
+/** Check whether the current (parent/student) user owns the given student */
 function parentOwnsStudent(studentId: string): boolean {
   if (!currentUser) return false;
-  if (currentUser.role !== 'parent') return true; // staff/admin can view any student
+  if (currentUser.role !== 'parent' && currentUser.role !== 'student') return true; // staff/admin can view any student
   return currentUser.studentIds.includes(studentId);
 }
 
@@ -392,6 +394,44 @@ export function handleMockRequest(
   }
 
   // ----------------------------------------------------------------
+  // HOMEWORK
+  // ----------------------------------------------------------------
+
+  // GET /homework/student/:studentId (must come before /homework/:homeworkId patterns)
+  const homeworkStudentMatch = cleanPath.match(/^\/homework\/student\/([^/]+)$/);
+  if (homeworkStudentMatch && upperMethod === 'GET') {
+    return handleHomeworkStudent(homeworkStudentMatch[1]);
+  }
+
+  // GET /homework/class/:classGroupId
+  const homeworkClassMatch = cleanPath.match(/^\/homework\/class\/([^/]+)$/);
+  if (homeworkClassMatch && upperMethod === 'GET') {
+    return handleHomeworkClass(homeworkClassMatch[1]);
+  }
+
+  // POST /homework
+  if (cleanPath === '/homework' && upperMethod === 'POST') {
+    return handleCreateHomework(body);
+  }
+
+  // GET /homework/:homeworkId/completions
+  const homeworkCompletionsMatch = cleanPath.match(/^\/homework\/([^/]+)\/completions$/);
+  if (homeworkCompletionsMatch && upperMethod === 'GET') {
+    return handleGetHomeworkCompletions(homeworkCompletionsMatch[1]);
+  }
+
+  // POST /homework/:homeworkId/completions
+  if (homeworkCompletionsMatch && upperMethod === 'POST') {
+    return handleToggleHomeworkCompletions(homeworkCompletionsMatch[1], body);
+  }
+
+  // DELETE /homework/:homeworkId
+  const homeworkDeleteMatch = cleanPath.match(/^\/homework\/([^/]+)$/);
+  if (homeworkDeleteMatch && upperMethod === 'DELETE') {
+    return handleDeleteHomework(homeworkDeleteMatch[1]);
+  }
+
+  // ----------------------------------------------------------------
   // Fallback
   // ----------------------------------------------------------------
   return err(404, `Mock handler not found: ${upperMethod} ${path}`);
@@ -444,7 +484,7 @@ function handleAuthLogin(body: any): { status: number; data: any } {
 // ---- STUDENTS ----
 
 function handleSearchStudents(params: URLSearchParams): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -534,7 +574,7 @@ function handleStudentClasses(studentId: string): { status: number; data: any } 
 }
 
 function handleStudentContacts(studentId: string): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -554,7 +594,7 @@ function handleStudentContacts(studentId: string): { status: number; data: any }
 // ---- STAFF ----
 
 function handleStaffClasses(): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -563,7 +603,7 @@ function handleStaffClasses(): { status: number; data: any } {
 }
 
 function handleStaffClassStudents(classId: string): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -587,7 +627,7 @@ function handleStaffClassStudents(classId: string): { status: number; data: any 
 }
 
 function handleStaffClassAttendance(classId: string): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -600,7 +640,7 @@ function handleStaffClassAttendance(classId: string): { status: number; data: an
 }
 
 function handleStaffTimetable(params: URLSearchParams): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -615,7 +655,7 @@ function handleStaffTimetable(params: URLSearchParams): { status: number; data: 
 }
 
 function handleStaffBehaviour(body: any): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -655,7 +695,7 @@ function handleStaffBehaviour(body: any): { status: number; data: any } {
 // ---- REGISTER ----
 
 function handleRegisterTeachers(): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -667,7 +707,7 @@ function handleRegisterTeachers(): { status: number; data: any } {
 }
 
 function handleRegisterTimetable(params: URLSearchParams): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -686,7 +726,7 @@ function handleRegisterTimetable(params: URLSearchParams): { status: number; dat
 }
 
 function handleGetRegister(lessonId: string, date: string): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -795,7 +835,7 @@ function handleGetRegister(lessonId: string, date: string): { status: number; da
 }
 
 function handleSaveRegister(lessonId: string, date: string, body: any): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -830,7 +870,7 @@ function handleSaveRegister(lessonId: string, date: string, body: any): { status
 }
 
 function handleRegisterBehaviour(_lessonId: string, _date: string, body: any): { status: number; data: any } {
-  if (currentUser!.role === 'parent') {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
     return err(403, 'Not authorized');
   }
 
@@ -1141,4 +1181,194 @@ function handleSendMessage(body: any): { status: number; data: any } {
     fromName: from ? `${from.firstName} ${from.lastName}` : 'Unknown',
     toName: `${recipient.firstName} ${recipient.lastName}`,
   });
+}
+
+// ---- HOMEWORK ----
+
+interface HomeworkType {
+  id: string;
+  classGroupId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  issuedDate: string;
+  teacherId: string;
+  teacherName: string;
+  links?: string[];
+}
+
+function handleHomeworkClass(classGroupId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const list = homeworks.filter((h) => h.classGroupId === classGroupId);
+  const enriched = list.map((h) => {
+    const group = classGroups.find((c) => c.id === h.classGroupId);
+    const totalStudents = group?.studentIds.length ?? 0;
+    const completedCount = homeworkCompletions.filter((c) => c.homeworkId === h.id).length;
+    return { ...h, totalStudents, completedCount };
+  });
+
+  return ok(enriched);
+}
+
+function handleCreateHomework(body: any): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const { classGroupId, title, description, dueDate, links } = body || {};
+
+  if (!classGroupId || !title || !description || !dueDate) {
+    return err(400, 'classGroupId, title, description, and dueDate are required');
+  }
+
+  const group = classGroups.find((c) => c.id === classGroupId);
+  if (!group) {
+    return err(404, 'Class group not found');
+  }
+
+  const teacher = users.find((u) => u.id === currentUser!.id);
+  const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Unknown';
+
+  const newHomework: HomeworkType = {
+    id: `hw-${Date.now()}`,
+    classGroupId,
+    title,
+    description,
+    dueDate,
+    issuedDate: new Date().toISOString().split('T')[0],
+    teacherId: currentUser!.id,
+    teacherName,
+    links: links?.length ? links : undefined,
+  };
+
+  homeworks.push(newHomework as any);
+  return created(newHomework);
+}
+
+function handleDeleteHomework(homeworkId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const index = homeworks.findIndex((h) => h.id === homeworkId);
+  if (index === -1) {
+    return err(404, 'Homework not found');
+  }
+
+  homeworks.splice(index, 1);
+
+  for (let i = homeworkCompletions.length - 1; i >= 0; i--) {
+    if (homeworkCompletions[i].homeworkId === homeworkId) {
+      homeworkCompletions.splice(i, 1);
+    }
+  }
+
+  return ok({ success: true });
+}
+
+function handleGetHomeworkCompletions(homeworkId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const homework = homeworks.find((h) => h.id === homeworkId);
+  if (!homework) {
+    return err(404, 'Homework not found');
+  }
+
+  const group = classGroups.find((c) => c.id === homework.classGroupId);
+  if (!group) {
+    return err(404, 'Class group not found');
+  }
+
+  const completions = homeworkCompletions.filter((c) => c.homeworkId === homeworkId);
+
+  const studentList = group.studentIds.map((sid) => {
+    const student = students.find((s) => s.id === sid);
+    const completion = completions.find((c) => c.studentId === sid);
+    return {
+      studentId: sid,
+      firstName: student?.firstName ?? 'Unknown',
+      lastName: student?.lastName ?? 'Unknown',
+      completed: !!completion,
+      completedAt: completion?.completedAt ?? null,
+    };
+  });
+
+  studentList.sort((a, b) => a.lastName.localeCompare(b.lastName));
+
+  return ok(studentList);
+}
+
+function handleToggleHomeworkCompletions(homeworkId: string, body: any): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const { studentIds: sids } = body || {};
+  if (!sids || !Array.isArray(sids)) {
+    return err(400, 'studentIds array is required');
+  }
+
+  const homework = homeworks.find((h) => h.id === homeworkId);
+  if (!homework) {
+    return err(404, 'Homework not found');
+  }
+
+  for (const sid of sids) {
+    const existingIndex = homeworkCompletions.findIndex(
+      (c) => c.homeworkId === homeworkId && c.studentId === sid
+    );
+
+    if (existingIndex >= 0) {
+      homeworkCompletions.splice(existingIndex, 1);
+    } else {
+      homeworkCompletions.push({
+        homeworkId,
+        studentId: sid,
+        completedAt: new Date().toISOString(),
+        markedBy: currentUser!.id,
+      });
+    }
+  }
+
+  return ok({ success: true });
+}
+
+function handleHomeworkStudent(studentId: string): { status: number; data: any } {
+  // Access control: students/parents can only see their own data
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    if (!currentUser!.studentIds.includes(studentId)) {
+      return err(403, 'You do not have permission to view this student');
+    }
+  }
+
+  const studentGroups = classGroups.filter((c) => c.studentIds.includes(studentId));
+  const groupIds = new Set(studentGroups.map((g) => g.id));
+
+  const studentHomework = homeworks.filter((h) => groupIds.has(h.classGroupId));
+
+  const enriched = studentHomework.map((h) => {
+    const group = classGroups.find((c) => c.id === h.classGroupId);
+    const completion = homeworkCompletions.find(
+      (c) => c.homeworkId === h.id && c.studentId === studentId
+    );
+    return {
+      ...h,
+      subject: group?.subject ?? 'Unknown',
+      className: group?.name ?? 'Unknown',
+      completed: !!completion,
+      completedAt: completion?.completedAt,
+    };
+  });
+
+  enriched.sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+  });
+
+  return ok(enriched);
 }

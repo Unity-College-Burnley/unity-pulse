@@ -14,10 +14,10 @@ const router = Router();
 // All student routes require auth
 router.use(requireAuth);
 
-/** Check the requesting parent is allowed to view this student */
+/** Check the requesting parent/student is allowed to view this student */
 function parentOwnsStudent(req: Request, studentId: string): boolean {
   if (!req.user) return false;
-  if (req.user.role !== 'parent') return true; // staff/admin can view any student
+  if (req.user.role !== 'parent' && req.user.role !== 'student') return true; // staff/admin can view any student
   const user = users.find((u) => u.id === req.user!.userId);
   return user?.studentIds.includes(studentId) ?? false;
 }

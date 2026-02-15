@@ -12,6 +12,7 @@ import messageRoutes from './routes/messages';
 import staffRoutes from './routes/staff';
 import adminRoutes from './routes/admin';
 import registerRoutes from './routes/register';
+import homeworkRoutes from './routes/homework';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -28,6 +29,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/register', registerRoutes);
+app.use('/api/homework', homeworkRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

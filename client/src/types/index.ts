@@ -7,7 +7,7 @@ export interface User {
   id: string;
   firstName: string;
   lastName: string;
-  role: 'parent' | 'teacher' | 'admin';
+  role: 'parent' | 'teacher' | 'admin' | 'student';
   studentIds: string[];
 }
 
@@ -161,4 +161,30 @@ export interface Message {
   readAt?: string;
   fromName?: string;
   toName?: string;
+}
+
+export interface Homework {
+  id: string;
+  classGroupId: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  issuedDate: string;
+  teacherId: string;
+  teacherName: string;
+  links?: string[];
+}
+
+export interface HomeworkCompletion {
+  homeworkId: string;
+  studentId: string;
+  completedAt: string;
+  markedBy: string;
+}
+
+export interface HomeworkItem extends Homework {
+  subject: string;
+  className: string;
+  completed: boolean;
+  completedAt?: string;
 }

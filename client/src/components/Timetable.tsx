@@ -28,7 +28,8 @@ function getTodayName(): (typeof DAYS)[number] | null {
 
 export default function Timetable({ lessons }: Props) {
   const today = getTodayName();
-  const [view, setView] = useState<'today' | 'week'>('today');
+  const isWeekend = !today;
+  const [view, setView] = useState<'today' | 'week'>(isWeekend ? 'week' : 'today');
   const [selectedDay, setSelectedDay] = useState<(typeof DAYS)[number]>(today ?? 'Monday');
 
   // Lessons for the selected day (today view) or all days (week view)
@@ -87,43 +88,49 @@ export default function Timetable({ lessons }: Props) {
         </div>
       )}
 
-      {/* Day schedule */}
-      <div className="space-y-2">
-        {/* Form time */}
-        <ScheduleSlot
-          label={FORM_TIME.label}
-          startTime={FORM_TIME.startTime}
-          endTime={FORM_TIME.endTime}
-          isBreak
-        />
+      {/* Weekend message when in Today view */}
+      {view === 'today' && isWeekend ? (
+        <div className="text-center py-8">
+          <p className="text-sm font-medium text-gray-500">No lessons today — it's the weekend!</p>
+          <button
+            onClick={() => setView('week')}
+            className="mt-2 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+          >
+            View weekly timetable
+          </button>
+        </div>
+      ) : (
+        /* Day schedule */
+        <div className="space-y-2">
+          {/* Form time */}
+          <ScheduleSlot
+            label={FORM_TIME.label}
+            startTime={FORM_TIME.startTime}
+            endTime={FORM_TIME.endTime}
+            isBreak
+          />
 
-        {/* Periods 1 & 2 */}
-        {dayLessons.filter((l) => l.period <= 2).map((l) => (
-          <LessonSlot key={l.id} lesson={l} />
-        ))}
+          {/* Periods 1 & 2 */}
+          {dayLessons.filter((l) => l.period <= 2).map((l) => (
+            <LessonSlot key={l.id} lesson={l} />
+          ))}
 
-        {/* Break */}
-        <ScheduleSlot label={BREAK.label} startTime={BREAK.startTime} endTime={BREAK.endTime} isBreak />
+          {/* Break */}
+          <ScheduleSlot label={BREAK.label} startTime={BREAK.startTime} endTime={BREAK.endTime} isBreak />
 
-        {/* Periods 3 & 4 */}
-        {dayLessons.filter((l) => l.period >= 3 && l.period <= 4).map((l) => (
-          <LessonSlot key={l.id} lesson={l} />
-        ))}
+          {/* Periods 3 & 4 */}
+          {dayLessons.filter((l) => l.period >= 3 && l.period <= 4).map((l) => (
+            <LessonSlot key={l.id} lesson={l} />
+          ))}
 
-        {/* Lunch */}
-        <ScheduleSlot label={LUNCH.label} startTime={LUNCH.startTime} endTime={LUNCH.endTime} isBreak />
+          {/* Lunch */}
+          <ScheduleSlot label={LUNCH.label} startTime={LUNCH.startTime} endTime={LUNCH.endTime} isBreak />
 
-        {/* Period 5 */}
-        {dayLessons.filter((l) => l.period === 5).map((l) => (
-          <LessonSlot key={l.id} lesson={l} />
-        ))}
-      </div>
-
-      {/* Weekend message */}
-      {view === 'today' && !today && (
-        <p className="text-sm text-gray-500 text-center py-4">
-          No lessons today — it's the weekend!
-        </p>
+          {/* Period 5 */}
+          {dayLessons.filter((l) => l.period === 5).map((l) => (
+            <LessonSlot key={l.id} lesson={l} />
+          ))}
+        </div>
       )}
     </section>
   );

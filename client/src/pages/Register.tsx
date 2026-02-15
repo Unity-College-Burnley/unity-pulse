@@ -2,7 +2,7 @@
 // Register page — attendance + ATL for a single lesson instance
 // ============================================================
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import {
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import type { ATLGrade, RegisterData, RegisterEntry, RegisterRow } from '../types';
 import { useNavigationGuard } from '../context/NavigationGuardContext';
+import SeatingPlan from '../components/SeatingPlan';
+import HomeworkTab from '../components/HomeworkTab';
 
 const PERIODS = [1, 2, 3, 4, 5] as const;
 
@@ -83,6 +85,7 @@ const CONSEQUENCE_REASONS: Record<3 | 4 | 5, string[]> = {
 // Register tabs (shells for now)
 const REGISTER_TABS = [
   'Register',
+  'Homework',
   'Photos',
   'Seating Plan',
   'Files',
@@ -218,6 +221,7 @@ export default function Register() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState<(typeof REGISTER_TABS)[number]>('Register');
   const [expandedCodeRow, setExpandedCodeRow] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
@@ -231,6 +235,18 @@ export default function Register() {
   const [showPostATL, setShowPostATL] = useState(false);
   const [postATLStudents, setPostATLStudents] = useState<PostATLStudent[]>([]);
   const [submittingBehaviour, setSubmittingBehaviour] = useState(false);
+
+  // Deferred N-code confirmation: delay action items by 20 minutes
+  // If returning from a dashboard alert, the delay has already elapsed — skip it
+  const registerOpenedAt = useRef<number>(Date.now());
+  const [nDelayPassed, setNDelayPassed] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('unity-pulse-pending-n') || '[]');
+      return stored.some((p: any) => p.lessonId === lessonId && p.date === date && Date.now() >= p.showAfter);
+    } catch {
+      return false;
+    }
+  });
 
   // Fetch register data
   useEffect(() => {
@@ -249,6 +265,12 @@ export default function Register() {
             localNote: r.note || '',
           }))
         );
+
+        // Clear any pending dashboard alert for this lesson — teacher is back
+        const key = 'unity-pulse-pending-n';
+        const stored = JSON.parse(localStorage.getItem(key) || '[]');
+        const cleaned = stored.filter((p: any) => !(p.lessonId === lessonId && p.date === date));
+        if (cleaned.length !== stored.length) localStorage.setItem(key, JSON.stringify(cleaned));
       } catch {
         setRegisterData(null);
         setRows([]);
@@ -258,6 +280,12 @@ export default function Register() {
     }
     fetchRegister();
   }, [lessonId, date]);
+
+  // 20-minute delay before N-code action items appear in sidebar
+  useEffect(() => {
+    const timer = setTimeout(() => setNDelayPassed(true), 20 * 60 * 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   function toggleCodeDropdown(studentId: string, triggerEl: HTMLButtonElement) {
     if (expandedCodeRow === studentId) {
@@ -280,6 +308,7 @@ export default function Register() {
       prev.map((r) => (r.studentId === studentId ? { ...r, [field]: value } : r))
     );
     setSaved(false);
+    setIsDirty(true);
   }, []);
 
   function markAllPresent() {
@@ -287,14 +316,23 @@ export default function Register() {
     const code = presentCodeForPeriod(registerData.period).code;
     setRows((prev) => prev.map((r) => ({ ...r, localCode: code })));
     setSaved(false);
+    setIsDirty(true);
   }
 
   function setAllATL(grade: ATLGrade) {
     setRows((prev) => prev.map((r) => ({ ...r, localATL: grade })));
     setSaved(false);
+    setIsDirty(true);
   }
 
-  // Compute action items from rows
+  // Always track unresolved N students (independent of 20-min delay)
+  const unresolvedNStudents = useMemo(() =>
+    rows.filter(r => r.localCode === 'N' && !dismissedNIds.has(r.studentId))
+        .map(r => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName })),
+    [rows, dismissedNIds]
+  );
+
+  // Compute action items from rows (N items gated behind 20-min delay)
   const actionItems = useMemo<ActionItem[]>(() => {
     const items: ActionItem[] = [];
     for (const row of rows) {
@@ -306,7 +344,7 @@ export default function Register() {
           lastName: row.lastName,
         });
       }
-      if (row.localCode === 'N' && !dismissedNIds.has(row.studentId)) {
+      if (nDelayPassed && row.localCode === 'N' && !dismissedNIds.has(row.studentId)) {
         items.push({
           type: 'no_reason_yet',
           studentId: row.studentId,
@@ -316,7 +354,37 @@ export default function Register() {
       }
     }
     return items;
-  }, [rows, dismissedNIds]);
+  }, [rows, dismissedNIds, nDelayPassed]);
+
+  // Keep latest state available in cleanup refs
+  const unresolvedNRef = useRef(unresolvedNStudents);
+  useEffect(() => { unresolvedNRef.current = unresolvedNStudents; }, [unresolvedNStudents]);
+
+  const registerDataRef = useRef(registerData);
+  useEffect(() => { registerDataRef.current = registerData; }, [registerData]);
+
+  // Persist unresolved N codes to localStorage on unmount
+  useEffect(() => {
+    return () => {
+      const nStudents = unresolvedNRef.current;
+      const regData = registerDataRef.current;
+      const key = 'unity-pulse-pending-n';
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
+      // Remove any existing entry for this lesson+date
+      const filtered = stored.filter((p: any) => !(p.lessonId === lessonId && p.date === date));
+      if (nStudents.length > 0 && regData) {
+        filtered.push({
+          lessonId, date,
+          subject: regData.subject,
+          classGroupName: regData.classGroupName,
+          period: regData.period,
+          showAfter: registerOpenedAt.current + 20 * 60 * 1000,
+          students: nStudents,
+        });
+      }
+      localStorage.setItem(key, JSON.stringify(filtered));
+    };
+  }, [lessonId, date]);
 
   // Auto-open sidebar when action items first appear
   useEffect(() => {
@@ -377,6 +445,7 @@ export default function Register() {
       }>(`/register/${lessonId}/${date}`, { entries });
 
       setSaved(true);
+      setIsDirty(false);
 
       // If any students need post-ATL logging, show the prompt
       if (res.data.needsLogging.length > 0) {
@@ -427,6 +496,51 @@ export default function Register() {
   const present = registerData ? presentCodeForPeriod(registerData.period) : { code: '/', label: 'Present (AM)' };
   const teacherCodes = [{ code: '-', label: 'No mark' }, present, ...OTHER_CODES.filter((c) => c.code !== '-')];
 
+  // Keyboard-driven attendance: refs for each row's attendance cell
+  const attendanceRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleAttendanceKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>, studentId: string, rowIndex: number) => {
+      const keyMap: Record<string, string> = {
+        '/': '/',
+        '\\': '\\',
+        n: 'N',
+        N: 'N',
+        l: 'L',
+        L: 'L',
+        '-': '-',
+      };
+
+      const code = keyMap[e.key];
+      if (code) {
+        e.preventDefault();
+        updateRow(studentId, 'localCode', code);
+        // Close any open dropdown so it doesn't cover the next row
+        setExpandedCodeRow(null);
+        setDropdownPos(null);
+        // Auto-advance to next student's attendance cell
+        if (rowIndex + 1 < rows.length) {
+          attendanceRefs.current[rowIndex + 1]?.focus();
+        }
+        return;
+      }
+
+      // Arrow key navigation
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (rowIndex + 1 < rows.length) {
+          attendanceRefs.current[rowIndex + 1]?.focus();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (rowIndex > 0) {
+          attendanceRefs.current[rowIndex - 1]?.focus();
+        }
+      }
+    },
+    [updateRow, rows.length]
+  );
+
   const presentCount = rows.filter((r) => r.localCode === '/' || r.localCode === '\\').length;
   const absentCount = rows.filter(
     (r) => r.localCode !== '/' && r.localCode !== '\\' && r.localCode !== '-'
@@ -434,17 +548,26 @@ export default function Register() {
   const unmarkedCount = rows.filter((r) => r.localCode === '-').length;
   const atlComplete = rows.every((r) => r.localATL !== null);
 
-  // Register navigation guard when ATLs are incomplete
-  const shouldWarnOnLeave = rows.length > 0 && !atlComplete;
+  // Register navigation guard when ATLs are incomplete or N codes unresolved
+  const leaveWarnings = useMemo(() => {
+    const warnings: string[] = [];
+    if (isDirty) warnings.push('You have unsaved changes to the register.');
+    if (rows.length > 0 && !atlComplete) warnings.push('Not all students have an ATL grade.');
+    if (nDelayPassed && unresolvedNStudents.length > 0)
+      warnings.push(`${unresolvedNStudents.length} student${unresolvedNStudents.length !== 1 ? 's' : ''} still marked N (attendance unconfirmed).`);
+    return warnings;
+  }, [isDirty, rows.length, atlComplete, nDelayPassed, unresolvedNStudents.length]);
+
+  const shouldWarnOnLeave = leaveWarnings.length > 0;
 
   useEffect(() => {
     if (shouldWarnOnLeave) {
-      setGuard(() => 'Not all students have an ATL grade. Are you sure you want to leave?');
+      setGuard(() => leaveWarnings.join(' ') + ' Are you sure you want to leave?');
     } else {
       setGuard(null);
     }
     return () => setGuard(null);
-  }, [shouldWarnOnLeave, setGuard]);
+  }, [shouldWarnOnLeave, setGuard, leaveWarnings]);
 
   // Browser tab close / refresh warning
   useEffect(() => {
@@ -623,6 +746,9 @@ export default function Register() {
               </span>
             )}
           </div>
+          <p className="hidden md:flex items-center gap-1 text-xs text-gray-400 mb-1">
+            Tip: Click an attendance cell and use keyboard (<kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">/</kbd> <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">\</kbd> <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">N</kbd> <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">L</kbd> <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[10px]">-</kbd>) to mark quickly
+          </p>
 
           {/* Register table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -655,7 +781,7 @@ export default function Register() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {rows.map((row, rowIndex) => (
                     <tr
                       key={row.studentId}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
@@ -711,8 +837,10 @@ export default function Register() {
                           return (
                             <td key={p} className="px-1 py-2 text-center bg-brand-50/30">
                               <button
+                                ref={(el) => { attendanceRefs.current[rowIndex] = el; }}
                                 onClick={(e) => toggleCodeDropdown(row.studentId, e.currentTarget)}
-                                className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-md border text-xs font-medium transition-colors ${
+                                onKeyDown={(e) => handleAttendanceKeyDown(e, row.studentId, rowIndex)}
+                                className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-md border text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-1 ${
                                   row.localCode === '/' || row.localCode === '\\'
                                     ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                                     : row.localCode === '-'
@@ -878,6 +1006,20 @@ export default function Register() {
             </div>
           </div>
         </>
+      ) : activeTab === 'Homework' ? (
+        <HomeworkTab
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
+          students={rows.map(r => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+        />
+      ) : activeTab === 'Seating Plan' ? (
+        <SeatingPlan
+          room={registerData.room}
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
+          teacherName={registerData.teacherName}
+          students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+        />
       ) : (
         /* Shell for other tabs */
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
@@ -1048,7 +1190,7 @@ export default function Register() {
         </div>
       )}
 
-      {/* ATL incomplete leave warning modal */}
+      {/* Leave warning modal (ATL incomplete / unresolved N codes) */}
       {showLeaveWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5">
@@ -1056,11 +1198,13 @@ export default function Register() {
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100">
                 <AlertTriangle size={20} className="text-amber-600" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900">ATLs Are Incomplete</h3>
+              <h3 className="text-base font-semibold text-gray-900">Before You Leave…</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Not all students have an ATL grade. Are you sure you want to leave?
-            </p>
+            <ul className="text-sm text-gray-600 mb-4 list-disc pl-5 space-y-1">
+              {leaveWarnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowLeaveWarning(false)}

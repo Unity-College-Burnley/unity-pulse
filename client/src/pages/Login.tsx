@@ -98,6 +98,7 @@ export default function Login() {
           <p>Parent: sarah.thompson@example.com</p>
           <p>Staff: j.wilson@unitycollege.ac.uk</p>
           <p>Admin: admin@unitycollege.ac.uk</p>
+          <p>Student: oliver.thompson@unitycollege.ac.uk</p>
           <p>Password (all): password123</p>
         </div>
       </div>

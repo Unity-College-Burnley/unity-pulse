@@ -4,13 +4,13 @@
 // messages and alerts.
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import {
   ChevronLeft, ChevronRight, Search, Bell, MessageSquare,
-  Clock, MapPin, Users,
+  Clock, MapPin, Users, AlertTriangle,
 } from 'lucide-react';
 import type { StaffLesson } from '../types';
 
@@ -29,6 +29,16 @@ interface Teacher {
   id: string;
   firstName: string;
   lastName: string;
+}
+
+interface PendingNEntry {
+  lessonId: string;
+  date: string;
+  subject: string;
+  classGroupName: string;
+  period: number;
+  showAfter: number;
+  students: Array<{ studentId: string; firstName: string; lastName: string }>;
 }
 
 function getWeekDates(offset: number): { monday: Date; label: string; dates: Record<string, string> } {
@@ -52,6 +62,53 @@ function getWeekDates(offset: number): { monday: Date; label: string; dates: Rec
   return { monday, label, dates };
 }
 
+// Academic year configs — first school week is always Week A.
+// holidayMondays lists the Monday of each full holiday week so A/B
+// alternation skips them (single INSET / bank-holiday days are ignored).
+const ACADEMIC_YEARS = [
+  {
+    startMonday: new Date(2025, 8, 1),  // Mon 1 Sep 2025 — 2025-2026
+    holidayMondays: [] as Date[],        // No term data — simple alternation
+  },
+  {
+    startMonday: new Date(2026, 7, 31), // Mon 31 Aug 2026 — 2026-2027
+    holidayMondays: [
+      new Date(2026, 9, 26),  // Autumn half term
+      new Date(2026, 11, 21), // Christmas week 1
+      new Date(2026, 11, 28), // Christmas week 2
+      new Date(2027, 1, 15),  // Spring half term
+      new Date(2027, 2, 29),  // Easter week 1
+      new Date(2027, 3, 5),   // Easter week 2
+      new Date(2027, 4, 31),  // Summer half term
+    ],
+  },
+];
+
+function getWeekType(monday: Date): 'A' | 'B' {
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+
+  // Find the applicable academic year (latest start that's <= this monday)
+  let year = ACADEMIC_YEARS[0];
+  for (const ay of ACADEMIC_YEARS) {
+    if (ay.startMonday.getTime() <= monday.getTime()) year = ay;
+  }
+
+  const totalWeeks = Math.round(
+    (monday.getTime() - year.startMonday.getTime()) / msPerWeek
+  );
+
+  // Count full holiday weeks that fall before this monday
+  let holidaysBefore = 0;
+  for (const hm of year.holidayMondays) {
+    if (hm.getTime() >= year.startMonday.getTime() && hm.getTime() < monday.getTime()) {
+      holidaysBefore++;
+    }
+  }
+
+  const schoolWeekIndex = totalWeeks - holidaysBefore;
+  return schoolWeekIndex % 2 === 0 ? 'A' : 'B';
+}
+
 function getTodayName(): string | null {
   const d = new Date().getDay();
   if (d >= 1 && d <= 5) return DAYS[d - 1];
@@ -64,14 +121,40 @@ export default function StaffDashboard() {
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
-  const [week, setWeek] = useState<'A' | 'B'>('A');
   const [weekOffset, setWeekOffset] = useState(0);
   const [lessons, setLessons] = useState<StaffLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingNAlerts, setPendingNAlerts] = useState<PendingNEntry[]>([]);
+
+  // Read pending N confirmations from localStorage (poll every 30s)
+  const checkPendingN = useCallback(() => {
+    try {
+      const stored: PendingNEntry[] = JSON.parse(localStorage.getItem('unity-pulse-pending-n') || '[]');
+      const now = Date.now();
+      setPendingNAlerts(stored.filter(entry => now >= entry.showAfter));
+    } catch {
+      setPendingNAlerts([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkPendingN();
+    const interval = setInterval(checkPendingN, 30 * 1000);
+    return () => clearInterval(interval);
+  }, [checkPendingN]);
+
+  function dismissPendingN(lessonId: string, date: string) {
+    const key = 'unity-pulse-pending-n';
+    const stored: PendingNEntry[] = JSON.parse(localStorage.getItem(key) || '[]');
+    const filtered = stored.filter(p => !(p.lessonId === lessonId && p.date === date));
+    localStorage.setItem(key, JSON.stringify(filtered));
+    setPendingNAlerts(prev => prev.filter(p => !(p.lessonId === lessonId && p.date === date)));
+  }
 
   const today = getTodayName();
-  const { label: weekLabel, dates: weekDates } = getWeekDates(weekOffset);
+  const { monday, label: weekLabel, dates: weekDates } = getWeekDates(weekOffset);
+  const week = getWeekType(monday);
 
   // Fetch teacher list on mount
   useEffect(() => {
@@ -131,15 +214,12 @@ export default function StaffDashboard() {
     <div>
       {/* Top bar: greeting + search + badges */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {isOwnTimetable
-              ? `Good morning, ${user?.firstName}`
-              : `${selectedTeacher?.firstName} ${selectedTeacher?.lastName}'s Timetable`
-            }
-          </h1>
-          <p className="text-sm text-gray-500">{weekLabel} · Week {week}</p>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900">
+          {isOwnTimetable
+            ? `Good morning, ${user?.firstName}`
+            : `${selectedTeacher?.firstName} ${selectedTeacher?.lastName}'s Timetable`
+          }
+        </h1>
 
         <div className="flex items-center gap-2">
           {/* Student search */}
@@ -194,26 +274,6 @@ export default function StaffDashboard() {
           ))}
         </select>
 
-        {/* Week A/B toggle */}
-        <div className="flex rounded-lg bg-gray-100 p-0.5">
-          <button
-            onClick={() => setWeek('A')}
-            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-              week === 'A' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Week A
-          </button>
-          <button
-            onClick={() => setWeek('B')}
-            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-              week === 'B' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Week B
-          </button>
-        </div>
-
         {/* Week navigation */}
         <div className="flex items-center gap-1">
           <button
@@ -223,12 +283,9 @@ export default function StaffDashboard() {
           >
             <ChevronLeft size={18} />
           </button>
-          <button
-            onClick={() => setWeekOffset(0)}
-            className="px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50 rounded-md transition-colors"
-          >
-            This week
-          </button>
+          <span className="px-3 py-1 text-sm font-medium text-gray-900 min-w-[180px] text-center">
+            {weekOffset === 0 ? 'This week' : weekLabel} · Week {week}
+          </span>
           <button
             onClick={() => setWeekOffset((o) => o + 1)}
             className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500"
@@ -236,8 +293,61 @@ export default function StaffDashboard() {
           >
             <ChevronRight size={18} />
           </button>
+          {weekOffset !== 0 && (
+            <button
+              onClick={() => setWeekOffset(0)}
+              className="ml-1 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50 rounded-md transition-colors"
+            >
+              Back to this week
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Pending N-code confirmation alerts */}
+      {pendingNAlerts.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {pendingNAlerts.map((alert) => (
+            <div
+              key={`${alert.lessonId}-${alert.date}`}
+              className="rounded-lg border border-amber-300 bg-amber-50 p-3"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-800">
+                    {alert.subject} {alert.classGroupName}
+                  </p>
+                  <p className="text-sm text-amber-700 mt-0.5">
+                    Did {alert.students.length === 1
+                      ? `${alert.students[0].firstName} ${alert.students[0].lastName}`
+                      : `these ${alert.students.length} students`} attend this lesson?
+                  </p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    {alert.students.map(s => `${s.firstName} ${s.lastName}`).join(', ')}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={() => navigate(`/register?lesson=${alert.lessonId}&date=${alert.date}`)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md
+                                 bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                    >
+                      Open Register
+                    </button>
+                    <button
+                      onClick={() => dismissPendingN(alert.lessonId, alert.date)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300
+                                 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      Confirm Absent
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Timetable grid */}
       {loading ? (

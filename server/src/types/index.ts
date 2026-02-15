@@ -8,10 +8,10 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string;
-  role: 'parent' | 'teacher' | 'admin';
+  role: 'parent' | 'teacher' | 'admin' | 'student';
   firstName: string;
   lastName: string;
-  /** IDs of students linked to this parent (empty for staff) */
+  /** IDs of students linked to this parent/student (empty for staff) */
   studentIds: string[];
 }
 
@@ -194,5 +194,24 @@ export interface ParentContact {
 /** JWT payload stored in the token */
 export interface TokenPayload {
   userId: string;
-  role: 'parent' | 'teacher' | 'admin';
+  role: 'parent' | 'teacher' | 'admin' | 'student';
+}
+
+export interface Homework {
+  id: string;
+  classGroupId: string;
+  title: string;
+  description: string;
+  dueDate: string;        // yyyy-mm-dd
+  issuedDate: string;     // yyyy-mm-dd
+  teacherId: string;
+  teacherName: string;
+  links?: string[];       // URLs instead of file uploads
+}
+
+export interface HomeworkCompletion {
+  homeworkId: string;
+  studentId: string;
+  completedAt: string;    // ISO timestamp
+  markedBy: string;       // teacherId who marked it
 }

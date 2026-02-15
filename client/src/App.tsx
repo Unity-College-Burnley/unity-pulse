@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import ParentDashboard from './pages/ParentDashboard';
 import StaffDashboard from './pages/StaffDashboard';
+import StudentDashboard from './pages/StudentDashboard';
 import Messages from './pages/Messages';
 import AdminDashboard from './pages/AdminDashboard';
 import Register from './pages/Register';
@@ -59,6 +60,10 @@ function RoleDashboard() {
 
   if (user?.role === 'teacher') {
     return <StaffDashboard />;
+  }
+
+  if (user?.role === 'student') {
+    return <StudentDashboard />;
   }
 
   return <ParentDashboard />;

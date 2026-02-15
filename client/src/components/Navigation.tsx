@@ -36,7 +36,7 @@ export default function Navigation() {
 
   // Admin gets a role badge in the nav (dashboard already shows admin view)
   const roleLabel =
-    user.role === 'admin' ? 'Admin' : user.role === 'teacher' ? 'Staff' : 'Parent';
+    user.role === 'admin' ? 'Admin' : user.role === 'teacher' ? 'Staff' : user.role === 'student' ? 'Student' : 'Parent';
 
   const isActive = (path: string) => location.pathname === path;
 
