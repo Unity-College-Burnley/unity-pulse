@@ -17,6 +17,9 @@ import {
   registerStore,
   homeworks,
   homeworkCompletions,
+  classPosts,
+  pastoralNotes,
+  studentPlans,
 } from './data';
 
 // MockUser type available from ./data if needed
@@ -50,6 +53,7 @@ interface Message {
   body: string;
   sentAt: string;
   readAt?: string;
+  allowReplies?: boolean;
 }
 
 interface Announcement {
@@ -334,6 +338,12 @@ export function handleMockRequest(
     return handleRegisterBehaviour(registerBehaviourMatch[1], registerBehaviourMatch[2], body);
   }
 
+  // GET /register/class-attendance/:classGroupId
+  const classAttMatch = cleanPath.match(/^\/register\/class-attendance\/([^/]+)$/);
+  if (classAttMatch && upperMethod === 'GET') {
+    return handleClassAttendance(classAttMatch[1]);
+  }
+
   // GET/POST /register/:lessonId/:date
   const registerMatch = cleanPath.match(/^\/register\/([^/]+)\/([^/]+)$/);
   if (registerMatch) {
@@ -429,6 +439,53 @@ export function handleMockRequest(
   const homeworkDeleteMatch = cleanPath.match(/^\/homework\/([^/]+)$/);
   if (homeworkDeleteMatch && upperMethod === 'DELETE') {
     return handleDeleteHomework(homeworkDeleteMatch[1]);
+  }
+
+  // ----------------------------------------------------------------
+  // CLASS POSTS
+  // ----------------------------------------------------------------
+  const classPostsClassMatch = cleanPath.match(/^\/class-posts\/class\/([^/]+)$/);
+  if (classPostsClassMatch && upperMethod === 'GET') {
+    return handleClassPostsByClass(classPostsClassMatch[1]);
+  }
+
+  if (cleanPath === '/class-posts' && upperMethod === 'POST') {
+    return handleCreateClassPost(body);
+  }
+
+  const classPostDeleteMatch = cleanPath.match(/^\/class-posts\/([^/]+)$/);
+  if (classPostDeleteMatch && upperMethod === 'DELETE') {
+    return handleDeleteClassPost(classPostDeleteMatch[1]);
+  }
+
+  const classPostStudentMatch = cleanPath.match(/^\/class-posts\/student\/([^/]+)$/);
+  if (classPostStudentMatch && upperMethod === 'GET') {
+    return handleClassPostsByStudent(classPostStudentMatch[1]);
+  }
+
+  // ----------------------------------------------------------------
+  // PASTORAL
+  // ----------------------------------------------------------------
+  const pastoralStudentMatch = cleanPath.match(/^\/pastoral\/student\/([^/]+)$/);
+  if (pastoralStudentMatch && upperMethod === 'GET') {
+    return handlePastoralByStudent(pastoralStudentMatch[1]);
+  }
+
+  if (cleanPath === '/pastoral' && upperMethod === 'POST') {
+    return handleCreatePastoralNote(body);
+  }
+
+  const pastoralDeleteMatch = cleanPath.match(/^\/pastoral\/([^/]+)$/);
+  if (pastoralDeleteMatch && upperMethod === 'DELETE') {
+    return handleDeletePastoralNote(pastoralDeleteMatch[1]);
+  }
+
+  // ----------------------------------------------------------------
+  // SEND
+  // ----------------------------------------------------------------
+  const sendClassMatch = cleanPath.match(/^\/send\/class\/([^/]+)$/);
+  if (sendClassMatch && upperMethod === 'GET') {
+    return handleSendClass(sendClassMatch[1]);
   }
 
   // ----------------------------------------------------------------
@@ -1060,6 +1117,52 @@ function handleGetAnnouncements(): { status: number; data: any } {
   return ok(sorted);
 }
 
+function handleClassAttendance(classGroupId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const classGroup = classGroups.find((c) => c.id === classGroupId);
+  if (!classGroup) return err(404, 'Class group not found');
+
+  const classLessonIds = new Set(
+    staffLessons.filter((l) => l.classGroupId === classGroupId).map((l) => l.id)
+  );
+
+  const studentStats: Record<string, { present: number; absent: number; late: number; total: number }> = {};
+  for (const sid of classGroup.studentIds) {
+    studentStats[sid] = { present: 0, absent: 0, late: 0, total: 0 };
+  }
+
+  for (const [key, entries] of registerStore.entries()) {
+    const lessonId = key.split('_')[0];
+    if (!classLessonIds.has(lessonId)) continue;
+    for (const entry of entries) {
+      const stats = studentStats[entry.studentId];
+      if (!stats) continue;
+      stats.total++;
+      if (entry.attendanceCode === '/' || entry.attendanceCode === '\\') {
+        stats.present++;
+      } else if (entry.attendanceCode === 'L') {
+        stats.late++;
+      } else if (entry.attendanceCode === 'N') {
+        stats.absent++;
+      }
+    }
+  }
+
+  const result = Object.entries(studentStats).map(([studentId, s]) => ({
+    studentId,
+    lessons: s.total,
+    present: s.present,
+    absent: s.absent,
+    late: s.late,
+    classPct: s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 1000) / 10 : null,
+  }));
+
+  return ok(result);
+}
+
 // ---- MESSAGES ----
 
 function handleMessagesContacts(): { status: number; data: any } {
@@ -1154,7 +1257,7 @@ function handleGetThread(contactId: string): { status: number; data: any } {
 }
 
 function handleSendMessage(body: any): { status: number; data: any } {
-  const { toUserId, body: messageBody } = body || {};
+  const { toUserId, body: messageBody, allowReplies } = body || {};
 
   if (!toUserId || !messageBody || !messageBody.trim()) {
     return err(400, 'Recipient and message body are required');
@@ -1171,6 +1274,7 @@ function handleSendMessage(body: any): { status: number; data: any } {
     toUserId,
     body: messageBody.trim(),
     sentAt: new Date().toISOString(),
+    ...(allowReplies === false ? { allowReplies: false } : {}),
   };
 
   messages.push(newMessage);
@@ -1371,4 +1475,144 @@ function handleHomeworkStudent(studentId: string): { status: number; data: any }
   });
 
   return ok(enriched);
+}
+
+// ---- CLASS POSTS ----
+
+function handleClassPostsByClass(classGroupId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+  const posts = classPosts
+    .filter((p) => p.classGroupId === classGroupId)
+    .sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+  return ok(posts);
+}
+
+function handleCreateClassPost(body: any): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+  const { classGroupId, body: postBody } = body || {};
+  if (!classGroupId || !postBody?.trim()) {
+    return err(400, 'classGroupId and body are required');
+  }
+  const classGroup = classGroups.find((c) => c.id === classGroupId);
+  if (!classGroup) return err(404, 'Class group not found');
+
+  const post = {
+    id: `cp-${Date.now()}`,
+    classGroupId,
+    classGroupName: classGroup.name,
+    subject: classGroup.subject,
+    authorId: currentUser!.id,
+    authorName: `${currentUser!.firstName} ${currentUser!.lastName}`,
+    body: postBody.trim(),
+    postedAt: new Date().toISOString(),
+  };
+  classPosts.push(post);
+  return created(post);
+}
+
+function handleDeleteClassPost(postId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+  const idx = classPosts.findIndex((p) => p.id === postId);
+  if (idx === -1) return err(404, 'Post not found');
+  classPosts.splice(idx, 1);
+  return ok({ deleted: true });
+}
+
+function handleClassPostsByStudent(studentId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    if (!currentUser!.studentIds.includes(studentId)) {
+      return err(403, 'You do not have permission to view this student');
+    }
+  }
+  const studentClassIds = classGroups
+    .filter((c) => c.studentIds.includes(studentId))
+    .map((c) => c.id);
+  const posts = classPosts
+    .filter((p) => studentClassIds.includes(p.classGroupId))
+    .sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+  return ok(posts);
+}
+
+// ---- PASTORAL ----
+
+function handlePastoralByStudent(studentId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+  const student = getStudent(studentId);
+  if (!student) return err(404, 'Student not found');
+
+  const notes = pastoralNotes
+    .filter((n) => n.studentId === studentId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return ok(notes);
+}
+
+function handleCreatePastoralNote(body: any): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const { studentId, category, severity, title, body: noteBody } = body || {};
+  if (!studentId || !category || !severity || !title || !noteBody?.trim()) {
+    return err(400, 'studentId, category, severity, title and body are required');
+  }
+
+  const student = getStudent(studentId);
+  if (!student) return err(404, 'Student not found');
+
+  const staffName = getTeacherDisplayName(currentUser!.id);
+
+  const note = {
+    id: `pn-${Date.now()}`,
+    studentId,
+    category,
+    severity,
+    title,
+    body: noteBody.trim(),
+    staffId: currentUser!.id,
+    staffName,
+    createdAt: new Date().toISOString(),
+  };
+
+  pastoralNotes.push(note);
+  return created(note);
+}
+
+function handleDeletePastoralNote(noteId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+  const idx = pastoralNotes.findIndex((n) => n.id === noteId);
+  if (idx === -1) return err(404, 'Note not found');
+
+  if (pastoralNotes[idx].staffId !== currentUser!.id && currentUser!.role !== 'admin') {
+    return err(403, 'You can only delete your own notes');
+  }
+
+  pastoralNotes.splice(idx, 1);
+  return ok({ deleted: true });
+}
+
+// ---- SEND ----
+
+function handleSendClass(classGroupId: string): { status: number; data: any } {
+  if (currentUser!.role === 'parent' || currentUser!.role === 'student') {
+    return err(403, 'Not authorized');
+  }
+
+  const classGroup = classGroups.find((c) => c.id === classGroupId);
+  if (!classGroup) return err(404, 'Class group not found');
+
+  const plans = studentPlans.filter((p) =>
+    classGroup.studentIds.includes(p.studentId)
+  );
+
+  return ok(plans);
 }

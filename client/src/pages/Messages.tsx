@@ -9,7 +9,7 @@ import { useEffect, useState, useRef, type FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
-import { Send, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Send, ArrowLeft, MessageSquare, ToggleLeft, ToggleRight, Lock } from 'lucide-react';
 import type { Message } from '../types';
 
 interface Conversation {
@@ -47,7 +47,10 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [allowReplies, setAllowReplies] = useState(true);
   const threadEndRef = useRef<HTMLDivElement>(null);
+
+  const isStaff = user?.role === 'teacher' || user?.role === 'admin';
 
   // Fetch conversation list, then check for ?contact= query param
   useEffect(() => {
@@ -110,6 +113,7 @@ export default function Messages() {
       const res = await api.post<{ data: Message }>('/messages', {
         toUserId: selectedContactId,
         body: newMessage,
+        ...(isStaff && !allowReplies ? { allowReplies: false } : {}),
       });
       setThread((prev) => [...prev, res.data]);
       setNewMessage('');
@@ -229,26 +233,61 @@ export default function Messages() {
                 <div ref={threadEndRef} />
               </div>
 
-              {/* Compose */}
-              <form onSubmit={handleSend} className="p-3 border-t border-gray-100 flex gap-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message…"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  disabled={sending || !newMessage.trim()}
-                  className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-3 py-2 transition-colors
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Send message"
-                >
-                  <Send size={18} />
-                </button>
-              </form>
+              {/* Compose — check if replies are disabled for non-staff */}
+              {(() => {
+                // Non-staff: check if the latest message from the other party has allowReplies: false
+                const lastFromOther = [...thread].reverse().find((m) => m.fromUserId !== user?.id);
+                const repliesBlocked = !isStaff && lastFromOther?.allowReplies === false;
+
+                if (repliesBlocked) {
+                  return (
+                    <div className="p-3 border-t border-gray-100 flex items-center justify-center gap-2 text-gray-400">
+                      <Lock size={14} />
+                      <span className="text-sm">Replies are not enabled for this conversation</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <form onSubmit={handleSend} className="p-3 border-t border-gray-100">
+                    {isStaff && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => setAllowReplies(!allowReplies)}
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          {allowReplies ? (
+                            <ToggleRight size={18} className="text-brand-500" />
+                          ) : (
+                            <ToggleLeft size={18} className="text-gray-400" />
+                          )}
+                          {allowReplies ? 'Replies enabled' : 'Replies disabled'}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message…"
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      />
+                      <button
+                        type="submit"
+                        disabled={sending || !newMessage.trim()}
+                        className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-3 py-2 transition-colors
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Send message"
+                      >
+                        <Send size={18} />
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400">

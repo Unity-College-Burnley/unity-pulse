@@ -124,7 +124,7 @@ router.get('/:contactId', (req: Request, res: Response) => {
  * Sends a new message
  */
 router.post('/', (req: Request, res: Response) => {
-  const { toUserId, body } = req.body;
+  const { toUserId, body, allowReplies } = req.body;
 
   if (!toUserId || !body || !body.trim()) {
     res.status(400).json({ error: 'Recipient and message body are required' });
@@ -143,6 +143,7 @@ router.post('/', (req: Request, res: Response) => {
     toUserId,
     body: body.trim(),
     sentAt: new Date().toISOString(),
+    ...(allowReplies === false ? { allowReplies: false } : {}),
   };
 
   // In production this would be a database insert.

@@ -126,6 +126,7 @@ export default function StaffDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingNAlerts, setPendingNAlerts] = useState<PendingNEntry[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Read pending N confirmations from localStorage (poll every 30s)
   const checkPendingN = useCallback(() => {
@@ -143,6 +144,22 @@ export default function StaffDashboard() {
     const interval = setInterval(checkPendingN, 30 * 1000);
     return () => clearInterval(interval);
   }, [checkPendingN]);
+
+  // Fetch unread message count (poll every 30s)
+  useEffect(() => {
+    async function fetchUnread() {
+      try {
+        const res = await api.get<{ data: Array<{ unreadCount: number }> }>('/messages');
+        const total = res.data.reduce((sum, c) => sum + c.unreadCount, 0);
+        setUnreadMessages(total);
+      } catch {
+        // silent
+      }
+    }
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   function dismissPendingN(lessonId: string, date: string) {
     const key = 'unity-pulse-pending-n';
@@ -254,6 +271,11 @@ export default function StaffDashboard() {
             aria-label="Messages"
           >
             <MessageSquare size={18} />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-brand-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {unreadMessages > 9 ? '9+' : unreadMessages}
+              </span>
+            )}
           </button>
         </div>
       </div>

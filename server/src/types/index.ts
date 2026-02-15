@@ -86,6 +86,18 @@ export interface Message {
   body: string;
   sentAt: string; // ISO date string
   readAt?: string; // ISO date string, undefined if unread
+  allowReplies?: boolean; // defaults to true; teacher can disable parent/student replies
+}
+
+export interface ClassPost {
+  id: string;
+  classGroupId: string;
+  classGroupName: string;
+  subject: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  postedAt: string; // ISO date string
 }
 
 /** A teaching class/group — links a teacher to a set of students */
@@ -214,4 +226,45 @@ export interface HomeworkCompletion {
   studentId: string;
   completedAt: string;    // ISO timestamp
   markedBy: string;       // teacherId who marked it
+}
+
+/** SEND plan data for a student — pen portrait, MyPlan, and/or EHCP */
+export interface StudentPlan {
+  studentId: string;
+  penPortrait?: {
+    summary: string;
+    strengths: string[];
+    difficulties: string[];
+    strategies: string[];
+    updatedAt: string;
+  };
+  myPlan?: {
+    targets: Array<{
+      target: string;
+      strategies: string[];
+      progress: 'not started' | 'emerging' | 'developing' | 'achieved';
+    }>;
+    reviewDate: string;
+    keyWorker: string;
+    updatedAt: string;
+  };
+  ehcp?: {
+    provisions: string[];
+    adjustments: string[];
+    keyWorker: string;
+    annualReviewDate: string;
+    updatedAt: string;
+  };
+}
+
+export interface PastoralNote {
+  id: string;
+  studentId: string;
+  category: 'safeguarding' | 'welfare' | 'attendance' | 'behavioural' | 'family' | 'medical' | 'other';
+  severity: 'low' | 'medium' | 'high';
+  title: string;
+  body: string;
+  staffId: string;
+  staffName: string;
+  createdAt: string;      // ISO date string
 }

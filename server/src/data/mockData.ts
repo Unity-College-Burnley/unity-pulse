@@ -18,6 +18,9 @@ import type {
   RegisterEntry,
   Homework,
   HomeworkCompletion,
+  ClassPost,
+  PastoralNote,
+  StudentPlan,
 } from '../types';
 
 // ----- Users -----
@@ -312,6 +315,7 @@ export const registerStore: Map<string, RegisterEntry[]> = new Map();
 
 // Pre-populate some register data for today's earlier lessons
 // (so earlier periods show read-only codes when viewing a later lesson)
+// Also seed historical data so the class attendance tab has useful data.
 function initRegisters() {
   const today = new Date().toISOString().split('T')[0];
 
@@ -326,6 +330,131 @@ function initRegisters() {
     { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 },
     { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
   ]);
+
+  // Historical data for cls-1 (9B/Ma1) — 10 past lessons across 5 weeks
+  // Gives each student a realistic mix of present / absent / late
+  const cls1Lessons: Array<{ lessonId: string; date: string; entries: RegisterEntry[] }> = [
+    { lessonId: 'sl-a-wil-mon-2', date: '2026-01-12', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
+    ]},
+    { lessonId: 'sl-a-wil-tue-2', date: '2026-01-13', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 1 },
+      { studentId: 'stu-3', attendanceCode: '/', atlGrade: 3 }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: 'L', atlGrade: 2, note: '5 minutes late' },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: '/', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-wed-3', date: '2026-01-14', entries: [
+      { studentId: 'stu-1', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-4', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
+    ]},
+    { lessonId: 'sl-a-wil-mon-2', date: '2026-01-19', entries: [
+      { studentId: 'stu-1', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 1 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: '/', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-tue-2', date: '2026-01-20', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-4', attendanceCode: 'L', atlGrade: 2, note: '3 minutes late' },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
+    ]},
+    { lessonId: 'sl-a-wil-wed-3', date: '2026-01-21', entries: [
+      { studentId: 'stu-1', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-4', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '\\', atlGrade: 3 },
+      { studentId: 'stu-7', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-mon-2', date: '2026-01-26', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: 'L', atlGrade: 2, note: '8 minutes late' },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
+    ]},
+    { lessonId: 'sl-a-wil-tue-2', date: '2026-01-27', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 1 },
+      { studentId: 'stu-3', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-4', attendanceCode: 'L', atlGrade: 2, note: '4 minutes late' },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: '/', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-mon-2', date: '2026-02-02', entries: [
+      { studentId: 'stu-1', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: 'N', atlGrade: null },
+    ]},
+    { lessonId: 'sl-a-wil-tue-2', date: '2026-02-03', entries: [
+      { studentId: 'stu-1', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-2', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-3', attendanceCode: 'L', atlGrade: 2, note: '10 minutes late' }, { studentId: 'stu-4', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-5', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-6', attendanceCode: '/', atlGrade: 2 },
+      { studentId: 'stu-7', attendanceCode: '/', atlGrade: 2 }, { studentId: 'stu-8', attendanceCode: '/', atlGrade: 2 },
+    ]},
+  ];
+
+  for (const lesson of cls1Lessons) {
+    registerStore.set(`${lesson.lessonId}_${lesson.date}`, lesson.entries);
+  }
+
+  // Historical data for cls-2 (10C/Ma2) — 8 past lessons
+  const cls2Lessons: Array<{ lessonId: string; date: string; entries: RegisterEntry[] }> = [
+    { lessonId: 'sl-a-wil-mon-4', date: '2026-01-12', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-tue-5', date: '2026-01-13', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 1 },
+      { studentId: 'stu-11', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: 'L', atlGrade: 2, note: '7 minutes late' }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-mon-4', date: '2026-01-19', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-tue-5', date: '2026-01-20', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: 'L', atlGrade: 2, note: '4 minutes late' },
+      { studentId: 'stu-13', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-mon-4', date: '2026-01-26', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: '\\', atlGrade: 3 }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-tue-5', date: '2026-01-27', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 1 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-mon-4', date: '2026-02-02', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: 'N', atlGrade: null }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+    { lessonId: 'sl-a-wil-tue-5', date: '2026-02-03', entries: [
+      { studentId: 'stu-9', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-10', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-11', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-12', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-13', attendanceCode: 'L', atlGrade: 2, note: '6 minutes late' }, { studentId: 'stu-14', attendanceCode: '\\', atlGrade: 2 },
+      { studentId: 'stu-15', attendanceCode: '\\', atlGrade: 2 }, { studentId: 'stu-16', attendanceCode: '\\', atlGrade: 2 },
+    ]},
+  ];
+
+  for (const lesson of cls2Lessons) {
+    registerStore.set(`${lesson.lessonId}_${lesson.date}`, lesson.entries);
+  }
 }
 initRegisters();
 
@@ -352,9 +481,9 @@ export const attendanceSummaries: AttendanceSummary[] = [
   { studentId: 'stu-1', overallPercentage: 95.2, presentDays: 99, absentDays: 3, lateDays: 2, totalDays: 104, presentToday: true, recentRecords: recentAttendance },
   { studentId: 'stu-2', overallPercentage: 98.1, presentDays: 102, absentDays: 1, lateDays: 1, totalDays: 104, presentToday: true, recentRecords: [] },
   { studentId: 'stu-3', overallPercentage: 91.3, presentDays: 95, absentDays: 7, lateDays: 2, totalDays: 104, presentToday: false, recentRecords: [] },
-  { studentId: 'stu-4', overallPercentage: 97.1, presentDays: 101, absentDays: 2, lateDays: 1, totalDays: 104, presentToday: true, recentRecords: [] },
+  { studentId: 'stu-4', overallPercentage: 97.1, presentDays: 101, absentDays: 2, lateDays: 3, totalDays: 104, presentToday: true, recentRecords: [] },
   { studentId: 'stu-5', overallPercentage: 99.0, presentDays: 103, absentDays: 1, lateDays: 0, totalDays: 104, presentToday: true, recentRecords: [] },
-  { studentId: 'stu-6', overallPercentage: 93.3, presentDays: 97, absentDays: 5, lateDays: 2, totalDays: 104, presentToday: true, recentRecords: [] },
+  { studentId: 'stu-6', overallPercentage: 93.3, presentDays: 97, absentDays: 5, lateDays: 5, totalDays: 104, presentToday: true, recentRecords: [] },
   { studentId: 'stu-7', overallPercentage: 96.2, presentDays: 100, absentDays: 3, lateDays: 1, totalDays: 104, presentToday: true, recentRecords: [] },
   { studentId: 'stu-8', overallPercentage: 88.5, presentDays: 92, absentDays: 10, lateDays: 2, totalDays: 104, presentToday: false, recentRecords: [] },
   { studentId: 'stu-9', overallPercentage: 97.1, presentDays: 101, absentDays: 2, lateDays: 1, totalDays: 104, presentToday: true, recentRecords: [] },
@@ -992,6 +1121,41 @@ export const messages: Message[] = [
   },
 ];
 
+// ----- Class Posts -----
+
+export const classPosts: ClassPost[] = [
+  {
+    id: 'cp-1',
+    classGroupId: 'cls-1',
+    classGroupName: '9B/Ma1',
+    subject: 'Maths',
+    authorId: 'usr-teacher-1',
+    authorName: 'Mr Wilson',
+    body: 'Reminder: Please bring your calculators to every lesson this week. We will be starting the statistics unit.',
+    postedAt: '2026-02-14T09:00:00Z',
+  },
+  {
+    id: 'cp-2',
+    classGroupId: 'cls-1',
+    classGroupName: '9B/Ma1',
+    subject: 'Maths',
+    authorId: 'usr-teacher-1',
+    authorName: 'Mr Wilson',
+    body: 'Well done to everyone who completed the quadratic equations homework on time. The class average was 72% which is a great improvement!',
+    postedAt: '2026-02-12T15:30:00Z',
+  },
+  {
+    id: 'cp-3',
+    classGroupId: 'cls-2',
+    classGroupName: '10C/Ma2',
+    subject: 'Maths',
+    authorId: 'usr-teacher-1',
+    authorName: 'Mr Wilson',
+    body: 'Mock exam revision sheets have been added to the homework section. Please work through at least two sections before Friday.',
+    postedAt: '2026-02-13T11:00:00Z',
+  },
+];
+
 // ----- Homework -----
 
 export const homeworks: Homework[] = [
@@ -1041,4 +1205,318 @@ export const homeworkCompletions: HomeworkCompletion[] = [
   // hw-3 (Trigonometry) — a couple of Year 10 students handed in
   { homeworkId: 'hw-3', studentId: 'stu-9', completedAt: '2026-02-14T16:00:00Z', markedBy: 'usr-teacher-1' },
   { homeworkId: 'hw-3', studentId: 'stu-10', completedAt: '2026-02-15T08:45:00Z', markedBy: 'usr-teacher-1' },
+];
+
+// ----- Pastoral Notes -----
+
+export const pastoralNotes: PastoralNote[] = [
+  {
+    id: 'pn-1',
+    studentId: 'stu-1',
+    category: 'welfare',
+    severity: 'medium',
+    title: 'Seems withdrawn in lessons',
+    body: 'Oliver has been noticeably quiet over the past week. Not engaging with group work as usual. Had a brief chat — says everything is fine but worth monitoring.',
+    staffId: 'usr-teacher-1',
+    staffName: 'Mr Wilson',
+    createdAt: '2026-02-10T11:30:00Z',
+  },
+  {
+    id: 'pn-2',
+    studentId: 'stu-1',
+    category: 'attendance',
+    severity: 'low',
+    title: 'Pattern of Monday absences',
+    body: 'Absent 3 of last 5 Mondays. Parent contacted — mum aware and says he is struggling with Sunday night anxiety. Will follow up with pastoral team.',
+    staffId: 'usr-teacher-1',
+    staffName: 'Mr Wilson',
+    createdAt: '2026-02-06T09:15:00Z',
+  },
+  {
+    id: 'pn-3',
+    studentId: 'stu-3',
+    category: 'family',
+    severity: 'high',
+    title: 'Parents separating — confidential',
+    body: 'Mum informed school that parents are going through a separation. Amara may be upset or distracted. Please handle sensitively. Referred to school counsellor.',
+    staffId: 'usr-admin-1',
+    staffName: 'Admin',
+    createdAt: '2026-02-12T14:00:00Z',
+  },
+  {
+    id: 'pn-4',
+    studentId: 'stu-9',
+    category: 'behavioural',
+    severity: 'medium',
+    title: 'Conflict with another student',
+    body: 'Leo had a verbal altercation with a Year 11 student at break. Both students spoken to separately. No physical contact. Parents not yet informed — monitoring.',
+    staffId: 'usr-teacher-1',
+    staffName: 'Mr Wilson',
+    createdAt: '2026-02-13T13:45:00Z',
+  },
+  {
+    id: 'pn-5',
+    studentId: 'stu-5',
+    category: 'medical',
+    severity: 'low',
+    title: 'New inhaler prescribed',
+    body: 'Mum called to say Sophia has been prescribed a new preventer inhaler. Spare kept in medical room. PE staff informed.',
+    staffId: 'usr-admin-1',
+    staffName: 'Admin',
+    createdAt: '2026-02-08T10:20:00Z',
+  },
+];
+
+// ----- SEND Plans -----
+
+export const studentPlans: StudentPlan[] = [
+  {
+    studentId: 'stu-3',
+    penPortrait: {
+      summary: 'Ethan is a quiet, thoughtful student who works best in structured environments. He can become anxious in unstructured situations or when routines change unexpectedly. He has a diagnosis of ASD and responds well to clear instructions and advance warning of transitions.',
+      strengths: [
+        'Strong visual learner — retains information well from diagrams and written instructions',
+        'Excellent attention to detail in written work',
+        'Kind and considerate with peers when comfortable',
+        'Passionate about science and technology',
+      ],
+      difficulties: [
+        'Processing verbal instructions, especially when given quickly or in multiple steps',
+        'Managing transitions between activities or unexpected timetable changes',
+        'Initiating social interactions or group work',
+        'Sensory overload in noisy environments',
+      ],
+      strategies: [
+        'Give instructions one step at a time, supported with written/visual prompts',
+        'Provide advance warning of any changes to routine (ideally 5+ minutes)',
+        'Seat near the front, away from doorways and high-traffic areas',
+        'Allow use of ear defenders during independent work if requested',
+        'Pair with a familiar, supportive peer for group activities',
+      ],
+      updatedAt: '2026-01-15T00:00:00Z',
+    },
+    ehcp: {
+      provisions: [
+        'Access to a quiet space for regulation breaks (up to 10 minutes, self-initiated)',
+        '1:1 TA support in English and Humanities (3 hours per week)',
+        'Modified homework expectations — extended deadlines by 2 days where needed',
+        'Speech and Language Therapy input termly',
+        'Annual review with EP, parents, SENCO, and class teachers',
+      ],
+      adjustments: [
+        'Extra processing time for verbal questions (minimum 10 seconds)',
+        'Written task instructions provided alongside verbal delivery',
+        'Reduced copying from the board — provide printed notes where possible',
+        'Exam access: 25% extra time, separate room, rest breaks',
+      ],
+      keyWorker: 'Mrs Davies (SENCO)',
+      annualReviewDate: '2026-05-12',
+      updatedAt: '2025-09-20T00:00:00Z',
+    },
+  },
+  {
+    studentId: 'stu-5',
+    penPortrait: {
+      summary: 'Sophia is a bright, sociable student who is capable of high achievement but can become easily distracted in lessons. She has a diagnosis of ADHD (combined type) and benefits from movement breaks and tasks broken into shorter chunks.',
+      strengths: [
+        'Creative thinker — excellent at generating ideas in discussions',
+        'Strong verbal communicator and confident presenter',
+        'Naturally empathetic — great at supporting peers emotionally',
+        'Highly motivated by praise and recognition',
+      ],
+      difficulties: [
+        'Sustaining focus during extended independent tasks (>10 minutes)',
+        'Organisational skills — often forgets equipment or homework',
+        'Impulse control — may call out or interrupt without raising hand',
+        'Starting tasks — can appear "frozen" even when she understands the work',
+      ],
+      strategies: [
+        'Break tasks into 10-minute chunks with mini check-ins',
+        'Use a visual timer on the board so she can see time remaining',
+        'Provide a task checklist she can physically tick off',
+        'Allow fidget tool use (she has an agreed stress ball)',
+        'Praise effort and on-task behaviour specifically and frequently',
+        'Seat away from windows and social distractions',
+      ],
+      updatedAt: '2026-01-10T00:00:00Z',
+    },
+    myPlan: {
+      targets: [
+        {
+          target: 'Complete and submit 80% of homework tasks on time over a half-term',
+          strategies: [
+            'Homework planner checked and signed by form tutor daily',
+            'Text reminder sent to parent on homework-heavy days',
+            'Access to homework club Tues/Thurs after school',
+          ],
+          progress: 'developing',
+        },
+        {
+          target: 'Use agreed hand signal instead of calling out in 4 out of 5 lessons observed',
+          strategies: [
+            'Discreet hand signal agreed with student (two fingers raised)',
+            'Teacher to acknowledge signal within 30 seconds',
+            'Self-monitoring tally chart on desk',
+          ],
+          progress: 'emerging',
+        },
+        {
+          target: 'Independently start tasks within 2 minutes of instruction in 3 out of 5 lessons',
+          strategies: [
+            'Teacher to provide written starter instruction on desk before lesson',
+            '"First step" prompt card in pencil case',
+            'TA to check in at start of task if available',
+          ],
+          progress: 'not started',
+        },
+      ],
+      reviewDate: '2026-03-28',
+      keyWorker: 'Mrs Davies (SENCO)',
+      updatedAt: '2026-01-10T00:00:00Z',
+    },
+  },
+  {
+    studentId: 'stu-8',
+    penPortrait: {
+      summary: 'Marcus has a complex profile including SEMH needs and a history of school refusal. When in school he can be engaged and articulate, but attendance is a significant barrier. He has an EHCP and a MyPlan focused on re-engagement. Relationships with trusted adults are key.',
+      strengths: [
+        'Articulate and perceptive — can produce excellent verbal responses',
+        'Strong sense of fairness and justice',
+        'Responds well to 1:1 adult support and mentoring',
+        'Interest in music and creative subjects',
+      ],
+      difficulties: [
+        'Anxiety around attending school — particularly Monday mornings and after holidays',
+        'Can become withdrawn or oppositional if he feels overwhelmed or singled out',
+        'Written output significantly below verbal ability',
+        'Building trust with new staff members',
+      ],
+      strategies: [
+        'Greet warmly and calmly at the door — avoid drawing attention to absence',
+        'Do not put on the spot publicly (e.g. reading aloud, answering cold-call questions)',
+        'Offer a quiet check-in at the start of the lesson: "How are you doing today?"',
+        'Accept verbal or recorded responses as alternatives to extended writing',
+        'If he signals he needs to leave, allow him to go to the Hub without question',
+      ],
+      updatedAt: '2026-02-01T00:00:00Z',
+    },
+    ehcp: {
+      provisions: [
+        'Personalised timetable — reduced to 80% with Wednesday PM as integration time',
+        'Access to The Hub (pastoral room) as a safe space throughout the day',
+        'Named key worker for weekly mentoring sessions (Mr Clarke)',
+        'Counselling provision: 1 session per week via school counsellor',
+        'Graduated return protocol after any absence of 3+ days',
+      ],
+      adjustments: [
+        'No sanctions for lateness on arrival — log but do not challenge',
+        'Alternative homework arrangements — verbal/recorded submissions accepted',
+        'Flexible seating — allowed to sit near exit for emotional regulation',
+        'Exam access: 25% extra time, separate room, scribe available',
+      ],
+      keyWorker: 'Mr Clarke (Pastoral Lead)',
+      annualReviewDate: '2026-06-18',
+      updatedAt: '2025-11-14T00:00:00Z',
+    },
+    myPlan: {
+      targets: [
+        {
+          target: 'Achieve 75% attendance across a full half-term',
+          strategies: [
+            'Morning check-in call from key worker on days not in school by 9:15',
+            'Reduced timetable with preferred subjects prioritised',
+            'Parent partnership: weekly update call every Friday',
+          ],
+          progress: 'emerging',
+        },
+        {
+          target: 'Attend at least 3 full days per week for 4 consecutive weeks',
+          strategies: [
+            'Flexible start — can arrive by 9:30 without consequence',
+            'Pre-agreed "safe" lessons to attend on difficult days',
+            'Reward: choice of enrichment activity on Friday PM after 3 full days',
+          ],
+          progress: 'not started',
+        },
+      ],
+      reviewDate: '2026-03-14',
+      keyWorker: 'Mr Clarke (Pastoral Lead)',
+      updatedAt: '2026-02-01T00:00:00Z',
+    },
+  },
+  {
+    studentId: 'stu-1',
+    penPortrait: {
+      summary: 'Oliver is a well-rounded student who performs well across most subjects. He has mild dyslexia which primarily affects his reading speed and spelling accuracy. He is confident and has good self-advocacy skills — he will usually ask for help when needed.',
+      strengths: [
+        'Strong mathematical and logical reasoning',
+        'Confident communicator — contributes well in discussions',
+        'Good self-awareness of his own learning needs',
+        'Popular with peers and works well in groups',
+      ],
+      difficulties: [
+        'Reading speed — may need longer to process text-heavy resources',
+        'Spelling accuracy, particularly with subject-specific vocabulary',
+        'Copying from the board accurately',
+      ],
+      strategies: [
+        'Provide printed handouts rather than expecting board copying',
+        'Allow use of laptop for extended writing tasks',
+        'Do not mark down for spelling errors in non-English subjects',
+        'Use pastel-coloured paper/overlays if available (cream preferred)',
+      ],
+      updatedAt: '2025-10-05T00:00:00Z',
+    },
+  },
+  {
+    studentId: 'stu-13',
+    penPortrait: {
+      summary: 'Noah is a polite, hardworking student who can lack confidence in his own abilities. He has dyscalculia and finds number-based tasks significantly more challenging than his peers. He benefits from concrete manipulatives and visual models.',
+      strengths: [
+        'Determined and hardworking — always attempts every task',
+        'Excellent literacy skills — reads above age-related expectations',
+        'Kind and supportive to classmates',
+        'Strong in humanities and creative writing',
+      ],
+      difficulties: [
+        'Number sense — struggles with mental arithmetic and estimation',
+        'Telling the time on analogue clocks',
+        'Interpreting graphs, charts, and data in any subject',
+        'Can become frustrated and shut down during maths-heavy activities',
+      ],
+      strategies: [
+        'Allow calculator use at all times in maths and science',
+        'Provide number lines and multiplication grids as reference tools',
+        'Use concrete examples before abstract concepts',
+        'Frame maths tasks within real-world contexts where possible',
+        'Avoid timed arithmetic tests — assess understanding through method',
+      ],
+      updatedAt: '2026-01-20T00:00:00Z',
+    },
+    myPlan: {
+      targets: [
+        {
+          target: 'Use a multiplication grid independently to solve problems in 4 out of 5 observed lessons',
+          strategies: [
+            'Laminated multiplication grid kept in pencil case',
+            'TA to model use at start of each new topic',
+            'Peer buddy system for checking working',
+          ],
+          progress: 'developing',
+        },
+        {
+          target: 'Attempt all graph/data questions in assessments (even if answer is incorrect)',
+          strategies: [
+            'Pre-teach graph reading skills in intervention sessions',
+            'Provide step-by-step scaffold for interpreting axes',
+            'Praise attempt and method over accuracy',
+          ],
+          progress: 'emerging',
+        },
+      ],
+      reviewDate: '2026-03-21',
+      keyWorker: 'Mrs Davies (SENCO)',
+      updatedAt: '2026-01-20T00:00:00Z',
+    },
+  },
 ];

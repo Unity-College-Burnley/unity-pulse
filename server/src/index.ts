@@ -13,6 +13,9 @@ import staffRoutes from './routes/staff';
 import adminRoutes from './routes/admin';
 import registerRoutes from './routes/register';
 import homeworkRoutes from './routes/homework';
+import classPostRoutes from './routes/classPosts';
+import pastoralRoutes from './routes/pastoral';
+import sendRoutes from './routes/send';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -30,6 +33,9 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/register', registerRoutes);
 app.use('/api/homework', homeworkRoutes);
+app.use('/api/class-posts', classPostRoutes);
+app.use('/api/pastoral', pastoralRoutes);
+app.use('/api/send', sendRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

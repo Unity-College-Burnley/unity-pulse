@@ -46,6 +46,66 @@ router.get('/timetable', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/register/class-attendance/:classGroupId
+ * Returns per-student class attendance calculated from saved registers.
+ * Each student gets: { studentId, lessons, present, absent, late, classPct }
+ *
+ * IMPORTANT: This route MUST be defined before /:lessonId/:date to avoid
+ * Express matching "class-attendance" as a lessonId parameter.
+ */
+router.get('/class-attendance/:classGroupId', (req: Request, res: Response) => {
+  const { classGroupId } = req.params;
+
+  const classGroup = classGroups.find((c) => c.id === classGroupId);
+  if (!classGroup) {
+    res.status(404).json({ error: 'Class group not found' });
+    return;
+  }
+
+  // Find all lesson IDs that belong to this class group
+  const classLessonIds = new Set(
+    staffLessons.filter((l) => l.classGroupId === classGroupId).map((l) => l.id)
+  );
+
+  // Scan the register store for entries matching these lessons
+  const studentStats: Record<string, { present: number; absent: number; late: number; total: number }> = {};
+
+  // Initialise all students in the class
+  for (const sid of classGroup.studentIds) {
+    studentStats[sid] = { present: 0, absent: 0, late: 0, total: 0 };
+  }
+
+  for (const [key, entries] of registerStore.entries()) {
+    const lessonId = key.split('_')[0];
+    if (!classLessonIds.has(lessonId)) continue;
+
+    for (const entry of entries) {
+      const stats = studentStats[entry.studentId];
+      if (!stats) continue;
+      stats.total++;
+      if (entry.attendanceCode === '/' || entry.attendanceCode === '\\') {
+        stats.present++;
+      } else if (entry.attendanceCode === 'L') {
+        stats.late++;
+      } else if (entry.attendanceCode === 'N') {
+        stats.absent++;
+      }
+    }
+  }
+
+  const result = Object.entries(studentStats).map(([studentId, s]) => ({
+    studentId,
+    lessons: s.total,
+    present: s.present,
+    absent: s.absent,
+    late: s.late,
+    classPct: s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 1000) / 10 : null,
+  }));
+
+  res.json({ data: result });
+});
+
+/**
  * GET /api/register/:lessonId/:date
  * Returns the full register for a lesson instance.
  * Each student row includes their attendance/ATL for this lesson,

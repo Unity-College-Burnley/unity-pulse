@@ -10,6 +10,7 @@ import BehaviourLog from '../components/BehaviourLog';
 import Timetable from '../components/Timetable';
 import NewsFeed from '../components/NewsFeed';
 import HomeworkList from '../components/HomeworkList';
+import ClassNotices from '../components/ClassNotices';
 import type {
   Student,
   AttendanceSummary as AttendanceData,
@@ -17,6 +18,7 @@ import type {
   TimetableLesson,
   Announcement,
   HomeworkItem,
+  ClassPost,
 } from '../types';
 
 interface DashboardData {
@@ -26,6 +28,7 @@ interface DashboardData {
   timetable: TimetableLesson[];
   announcements: Announcement[];
   homework: HomeworkItem[];
+  classPosts: ClassPost[];
 }
 
 export default function ParentDashboard() {
@@ -42,7 +45,7 @@ export default function ParentDashboard() {
     async function fetchAll() {
       try {
         // Fetch all data in parallel
-        const [studentRes, attendanceRes, behaviourRes, timetableRes, announcementsRes, homeworkRes] =
+        const [studentRes, attendanceRes, behaviourRes, timetableRes, announcementsRes, homeworkRes, classPostsRes] =
           await Promise.all([
             api.get<{ data: Student }>(`/students/${studentId}`),
             api.get<{ data: AttendanceData }>(`/students/${studentId}/attendance`),
@@ -50,6 +53,7 @@ export default function ParentDashboard() {
             api.get<{ data: TimetableLesson[] }>(`/students/${studentId}/timetable`),
             api.get<{ data: Announcement[] }>('/announcements'),
             api.get<{ data: HomeworkItem[] }>(`/homework/student/${studentId}`),
+            api.get<{ data: ClassPost[] }>(`/class-posts/student/${studentId}`),
           ]);
 
         setData({
@@ -59,6 +63,7 @@ export default function ParentDashboard() {
           timetable: timetableRes.data,
           announcements: announcementsRes.data,
           homework: homeworkRes.data,
+          classPosts: classPostsRes.data,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard');
@@ -104,6 +109,7 @@ export default function ParentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <HomeworkList homework={data.homework} />
         <AttendanceSummary data={data.attendance} />
+        <ClassNotices posts={data.classPosts} />
         <Timetable lessons={data.timetable} />
         <BehaviourLog events={data.behaviour} />
         <div className="lg:col-span-2">

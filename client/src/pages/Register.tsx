@@ -8,12 +8,17 @@ import { api } from '../services/api';
 import {
   ArrowLeft, Check, CheckCheck, Save, X,
   MapPin, Clock, Users, Award, AlertTriangle,
-  ChevronDown, ClipboardList, Clock3, HelpCircle,
+  ChevronDown, ChevronUp, ClipboardList, Clock3, HelpCircle,
 } from 'lucide-react';
 import type { ATLGrade, RegisterData, RegisterEntry, RegisterRow } from '../types';
 import { useNavigationGuard } from '../context/NavigationGuardContext';
 import SeatingPlan from '../components/SeatingPlan';
 import HomeworkTab from '../components/HomeworkTab';
+import PhotoGrid from '../components/PhotoGrid';
+import SpreadsheetTab from '../components/SpreadsheetTab';
+import CommsTab from '../components/CommsTab';
+import ClassAttendanceTab from '../components/ClassAttendanceTab';
+import MyPlansTab from '../components/MyPlansTab';
 
 const PERIODS = [1, 2, 3, 4, 5] as const;
 
@@ -91,9 +96,7 @@ const REGISTER_TABS = [
   'Files',
   'Spreadsheet',
   'Comms',
-  'Pastoral',
   'Attendance',
-  'Assessment',
   'MyPlans',
 ] as const;
 
@@ -223,6 +226,8 @@ export default function Register() {
   const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState<(typeof REGISTER_TABS)[number]>('Register');
+  const [showMoreTabs, setShowMoreTabs] = useState(false);
+  const moreTabsRef = useRef<HTMLDivElement>(null);
   const [expandedCodeRow, setExpandedCodeRow] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -247,6 +252,19 @@ export default function Register() {
       return false;
     }
   });
+
+  // Close "More" dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreTabsRef.current && !moreTabsRef.current.contains(e.target as Node)) {
+        setShowMoreTabs(false);
+      }
+    }
+    if (showMoreTabs) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMoreTabs]);
 
   // Fetch register data
   useEffect(() => {
@@ -699,22 +717,63 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 mb-4 border-b border-gray-200">
-        {REGISTER_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap transition-colors ${
-              activeTab === tab
-                ? 'text-brand-600 border-b-2 border-brand-500 bg-brand-50/50'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — primary tabs shown inline, overflow in "More" dropdown */}
+      {(() => {
+        const PRIMARY_TABS = REGISTER_TABS.slice(0, 5);   // Register, Homework, Photos, Seating Plan, Files
+        const MORE_TABS = REGISTER_TABS.slice(5);          // Spreadsheet, Comms, Pastoral, Attendance, Assessment, MyPlans
+        const activeInMore = MORE_TABS.includes(activeTab as any);
+
+        return (
+          <div className="flex items-end mb-4 border-b border-gray-200">
+            {PRIMARY_TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 px-1 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap text-center transition-colors ${
+                  activeTab === tab
+                    ? 'text-brand-600 border-b-2 border-brand-500 bg-brand-50/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+
+            {/* "More" dropdown */}
+            <div className="relative flex-1" ref={moreTabsRef}>
+              <button
+                onClick={() => setShowMoreTabs(!showMoreTabs)}
+                className={`w-full flex items-center justify-center gap-1 px-1 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap transition-colors ${
+                  activeInMore
+                    ? 'text-brand-600 border-b-2 border-brand-500 bg-brand-50/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {activeInMore ? activeTab : 'More'}
+                {showMoreTabs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              {showMoreTabs && (
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30 min-w-[160px]">
+                  {MORE_TABS.map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => { setActiveTab(tab); setShowMoreTabs(false); }}
+                      className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
+                        activeTab === tab
+                          ? 'text-brand-600 bg-brand-50 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Tab content */}
       {activeTab === 'Register' ? (
@@ -1012,12 +1071,40 @@ export default function Register() {
           classGroupName={registerData.classGroupName}
           students={rows.map(r => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
         />
+      ) : activeTab === 'Photos' ? (
+        <PhotoGrid
+          students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+          classGroupName={registerData.classGroupName}
+        />
       ) : activeTab === 'Seating Plan' ? (
         <SeatingPlan
           room={registerData.room}
           classGroupId={registerData.classGroupId}
           classGroupName={registerData.classGroupName}
           teacherName={registerData.teacherName}
+          students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+        />
+      ) : activeTab === 'Spreadsheet' ? (
+        <SpreadsheetTab
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
+          students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+        />
+      ) : activeTab === 'Comms' ? (
+        <CommsTab
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
+        />
+      ) : activeTab === 'Attendance' ? (
+        <ClassAttendanceTab
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
+          students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
+        />
+      ) : activeTab === 'MyPlans' ? (
+        <MyPlansTab
+          classGroupId={registerData.classGroupId}
+          classGroupName={registerData.classGroupName}
           students={rows.map((r) => ({ studentId: r.studentId, firstName: r.firstName, lastName: r.lastName }))}
         />
       ) : (

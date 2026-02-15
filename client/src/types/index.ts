@@ -161,6 +161,18 @@ export interface Message {
   readAt?: string;
   fromName?: string;
   toName?: string;
+  allowReplies?: boolean;
+}
+
+export interface ClassPost {
+  id: string;
+  classGroupId: string;
+  classGroupName: string;
+  subject: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  postedAt: string;
 }
 
 export interface Homework {
@@ -187,4 +199,44 @@ export interface HomeworkItem extends Homework {
   className: string;
   completed: boolean;
   completedAt?: string;
+}
+
+export interface StudentPlan {
+  studentId: string;
+  penPortrait?: {
+    summary: string;
+    strengths: string[];
+    difficulties: string[];
+    strategies: string[];
+    updatedAt: string;
+  };
+  myPlan?: {
+    targets: Array<{
+      target: string;
+      strategies: string[];
+      progress: 'not started' | 'emerging' | 'developing' | 'achieved';
+    }>;
+    reviewDate: string;
+    keyWorker: string;
+    updatedAt: string;
+  };
+  ehcp?: {
+    provisions: string[];
+    adjustments: string[];
+    keyWorker: string;
+    annualReviewDate: string;
+    updatedAt: string;
+  };
+}
+
+export interface PastoralNote {
+  id: string;
+  studentId: string;
+  category: 'safeguarding' | 'welfare' | 'attendance' | 'behavioural' | 'family' | 'medical' | 'other';
+  severity: 'low' | 'medium' | 'high';
+  title: string;
+  body: string;
+  staffId: string;
+  staffName: string;
+  createdAt: string;
 }

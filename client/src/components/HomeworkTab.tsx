@@ -5,10 +5,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../services/api';
 import {
-  Plus, Trash2, Check, CheckCheck, ChevronRight,
+  Plus, Trash2, Check, CheckCheck, ChevronLeft, ChevronRight,
   ExternalLink, X, BookOpen,
 } from 'lucide-react';
-import type { Homework } from '../types';
+import type { Homework, StaffLesson } from '../types';
 
 interface HomeworkWithCounts extends Homework {
   totalStudents: number;
@@ -29,6 +29,135 @@ interface Props {
   students: { studentId: string; firstName: string; lastName: string }[];
 }
 
+// ---- Due-date calendar with lesson-day highlights ----
+const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function DueDatePicker({
+  value,
+  onChange,
+  lessonDays,
+}: {
+  value: string;
+  onChange: (date: string) => void;
+  lessonDays: string[];
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [view, setView] = useState(() => ({
+    year: today.getFullYear(),
+    month: today.getMonth(),
+  }));
+
+  const selectedDate = value ? new Date(value + 'T00:00:00') : null;
+
+  // Build calendar grid (Monday-start)
+  const firstOfMonth = new Date(view.year, view.month, 1);
+  const lastOfMonth = new Date(view.year, view.month + 1, 0);
+  let startOffset = firstOfMonth.getDay() - 1;
+  if (startOffset < 0) startOffset = 6;
+
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= lastOfMonth.getDate(); d++) {
+    cells.push(new Date(view.year, view.month, d));
+  }
+
+  function isLessonDay(date: Date): boolean {
+    return lessonDays.includes(DAY_NAMES_FULL[date.getDay()]);
+  }
+
+  function isSame(a: Date, b: Date): boolean {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function toIso(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  const monthLabel = firstOfMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3">
+      {/* Month navigation */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          onClick={() => setView((v) => { const d = new Date(v.year, v.month - 1, 1); return { year: d.getFullYear(), month: d.getMonth() }; })}
+          className="p-1 rounded hover:bg-gray-100 text-gray-400"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="text-sm font-semibold text-gray-900">{monthLabel}</span>
+        <button
+          type="button"
+          onClick={() => setView((v) => { const d = new Date(v.year, v.month + 1, 1); return { year: d.getFullYear(), month: d.getMonth() }; })}
+          className="p-1 rounded hover:bg-gray-100 text-gray-400"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {WEEKDAY_HEADERS.map((d) => (
+          <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((date, i) => {
+          if (!date) return <div key={`e-${i}`} className="h-8" />;
+          const isPast = date < today;
+          const isToday = isSame(date, today);
+          const isSelected = selectedDate ? isSame(date, selectedDate) : false;
+          const isLesson = !isPast && isLessonDay(date);
+
+          return (
+            <button
+              key={date.getDate()}
+              type="button"
+              disabled={isPast}
+              onClick={() => onChange(toIso(date))}
+              className={`relative h-8 rounded-md text-xs font-medium transition-all ${
+                isSelected
+                  ? 'bg-brand-600 text-white'
+                  : isToday
+                    ? 'bg-gray-100 text-gray-900 font-bold'
+                    : isPast
+                      ? 'text-gray-300 cursor-default'
+                      : isLesson
+                        ? 'text-brand-700 hover:bg-brand-50 font-semibold'
+                        : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {date.getDate()}
+              {isLesson && !isSelected && (
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-500" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend + selected date */}
+      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+          <span className="text-[10px] text-gray-500">Lesson day</span>
+        </div>
+        {selectedDate && (
+          <span className="text-[10px] text-gray-500 ml-auto">
+            {selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function HomeworkTab({ classGroupId, classGroupName }: Props) {
   const [homeworkList, setHomeworkList] = useState<HomeworkWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +173,22 @@ export default function HomeworkTab({ classGroupId, classGroupName }: Props) {
   const [formDue, setFormDue] = useState('');
   const [formLinks, setFormLinks] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Lesson days for this class (used by due-date calendar)
+  const [lessonDays, setLessonDays] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchLessonDays() {
+      try {
+        const res = await api.get<{ data: StaffLesson[] }>('/staff/timetable');
+        const classLessons = res.data.filter((l) => l.classGroupId === classGroupId);
+        setLessonDays([...new Set(classLessons.map((l) => l.day))]);
+      } catch {
+        // silent
+      }
+    }
+    fetchLessonDays();
+  }, [classGroupId]);
 
   const fetchHomework = useCallback(async () => {
     try {
@@ -227,14 +372,7 @@ export default function HomeworkTab({ classGroupId, classGroupName }: Props) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Due Date</label>
-              <input
-                type="date"
-                required
-                value={formDue}
-                onChange={(e) => setFormDue(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-              />
+              <DueDatePicker value={formDue} onChange={setFormDue} lessonDays={lessonDays} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Links (comma-separated, optional)</label>
@@ -249,7 +387,7 @@ export default function HomeworkTab({ classGroupId, classGroupName }: Props) {
             </div>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !formDue}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium
                          bg-brand-600 hover:bg-brand-700 text-white transition-colors disabled:opacity-50"
             >

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Grid3X3, Trash2, PenLine, Users, AlertTriangle, RotateCcw, Copy, Save, GraduationCap, Presentation, DoorOpen,
+  Grid3X3, Trash2, PenLine, Users, AlertTriangle, RotateCcw, Copy, Save, GraduationCap, Presentation, DoorOpen, Camera,
 } from 'lucide-react';
 
 // --------------- localStorage keys ---------------
@@ -42,6 +42,7 @@ interface SeatingPlanProps {
   classGroupName: string;
   teacherName: string;
   students: { studentId: string; firstName: string; lastName: string }[];
+  photos?: Record<string, string>; // studentId → photo URL
 }
 
 const FIXTURE_META: Record<FixtureType, { label: string; icon: typeof GraduationCap }> = {
@@ -123,9 +124,10 @@ function FixtureIcon({ type, size = 18 }: { type: FixtureType; size?: number }) 
 // ============================================================
 // Component
 // ============================================================
-export default function SeatingPlan({ room, classGroupId, classGroupName, teacherName, students }: SeatingPlanProps) {
+export default function SeatingPlan({ room, classGroupId, classGroupName, teacherName, students, photos = {} }: SeatingPlanProps) {
   const seatingKey = `${classGroupId}:${room}`;
   const isTouch = 'ontouchstart' in window;
+  const [showPhotos, setShowPhotos] = useState(false);
 
   // ---- State ----
   const [mode, setMode] = useState<'layout' | 'assign'>(() => {
@@ -869,6 +871,18 @@ export default function SeatingPlan({ room, classGroupId, classGroupName, teache
               Clear Seats
             </button>
             <button
+              onClick={() => setShowPhotos((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                showPhotos
+                  ? 'border border-brand-400 bg-brand-100 text-brand-700'
+                  : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+              title={showPhotos ? 'Switch to initials' : 'Show photos on desks'}
+            >
+              <Camera size={14} />
+              Photos
+            </button>
+            <button
               onClick={switchToLayout}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
                          border border-brand-300 bg-brand-50 text-brand-700
@@ -976,9 +990,17 @@ export default function SeatingPlan({ room, classGroupId, classGroupName, teache
                                   onDragStart={(e) => handleDeskDragStart(e, student.studentId)}
                                   className="flex flex-col items-center w-full"
                                 >
-                                  <span className="text-sm sm:text-base font-bold">
-                                    {initials(student.firstName, student.lastName)}
-                                  </span>
+                                  {showPhotos && photos[student.studentId] ? (
+                                    <img
+                                      src={photos[student.studentId]}
+                                      alt={`${student.firstName} ${student.lastName}`}
+                                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-sm sm:text-base font-bold">
+                                      {initials(student.firstName, student.lastName)}
+                                    </span>
+                                  )}
                                   <span className="text-[9px] sm:text-[10px] text-brand-600 truncate max-w-[40px] sm:max-w-[56px] text-center leading-tight">
                                     {student.firstName}
                                   </span>
@@ -1030,9 +1052,17 @@ export default function SeatingPlan({ room, classGroupId, classGroupName, teache
                           : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
-                      <span className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center">
-                        {initials(s.firstName, s.lastName)}
-                      </span>
+                      {showPhotos && photos[s.studentId] ? (
+                        <img
+                          src={photos[s.studentId]}
+                          alt={`${s.firstName} ${s.lastName}`}
+                          className="flex-shrink-0 w-7 h-7 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center">
+                          {initials(s.firstName, s.lastName)}
+                        </span>
+                      )}
                       <span className="truncate text-xs font-medium">
                         {s.firstName} {s.lastName}
                       </span>
