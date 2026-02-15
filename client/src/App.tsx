@@ -93,9 +93,11 @@ function AppRoutes() {
   );
 }
 
+const BASE = import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE}>
       <NavigationGuardProvider>
         <AuthProvider>
           <AppRoutes />
